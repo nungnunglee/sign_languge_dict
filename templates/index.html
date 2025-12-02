@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>수어 마스터 AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div id="intro-screen" class="container intro-container">
+    <h1>수어 마스터 AI</h1>
+    <p class="subtitle">서비스를 선택해주세요</p>
+
+    <div class="card-grid">
+        <div class="card" id="card-translate">
+            <div class="card-icon">🗣️</div>
+            <h2>수어 번역</h2>
+            <p>내 동작을<br>텍스트로 변환</p>
+        </div>
+        <div class="card" id="card-dictionary">
+            <div class="card-icon">📖</div>
+            <h2>수어 사전</h2>
+            <p>단어 검색<br>및 동영상 학습</p>
+        </div>
+        <div class="card" id="card-game">
+            <div class="card-icon">🎮</div>
+            <h2>수어 게임</h2>
+            <p>퀴즈로 배우는<br>재미있는 수어</p>
+        </div>
+    </div>
+</div>
+
+<div id="translation-app" class="container hidden">
+    <button class="back-btn" onclick="goHome()">← 메인으로</button>
+
+    <h1>수어 번역</h1>
+
+    <div class="stepper-nav">
+        <div class="nav-item active" id="nav-1"><div class="nav-circle">1</div><span>입력</span></div>
+        <div class="nav-item" id="nav-2"><div class="nav-circle">2</div><span>분석</span></div>
+        <div class="nav-item" id="nav-3"><div class="nav-circle">3</div><span>결과</span></div>
+    </div>
+
+    <div class="step-container">
+        <div class="step active" id="step-upload">
+            <div class="mode-switch">
+                <button id="btn-mode-file" class="mode-btn active">📁 파일 업로드</button>
+                <button id="btn-mode-cam" class="mode-btn">📹 웹캠 촬영</button>
+            </div>
+
+            <div id="mode-file-area">
+                <div id="drop-area" class="drop-area">
+                    <input type="file" id="video-file-input" accept="video/*" class="file-input-hidden">
+                    <div class="icon-area">📁</div>
+                    <p class="status-text"><span>여기를 클릭하여 파일 선택</span></p>
+                </div>
+            </div>
+
+            <div id="mode-cam-area" class="hidden">
+                <div class="cam-container">
+                    <video id="cam-preview" autoplay muted playsinline></video>
+                    <div id="recording-indicator" class="hidden">REC</div>
+                </div>
+                <div class="cam-controls">
+                    <button id="btn-start-record" class="secondary-btn">🔴 녹화 시작</button>
+                    <button id="btn-stop-record" class="secondary-btn hidden">⬛ 녹화 종료</button>
+                </div>
+                <p id="cam-status-text" style="text-align: center; color: #888; margin-top: 10px;">준비됨</p>
+            </div>
+
+            <div class="submit-area">
+                <button id="upload-button" disabled class="main-btn">다음 단계로</button>
+            </div>
+        </div>
+
+        <div class="step" id="step-translate">
+            <div class="progress-section">
+                <div class="loader-icon">🤖</div>
+                <p>Task ID: <span id="task-id-display">Generating...</span></p>
+                <div class="progress-bar-container">
+                    <div id="progress-bar-fill" class="progress-bar-fill"></div>
+                </div>
+                <p><span id="progress-message">분석 준비 중...</span></p>
+            </div>
+        </div>
+
+        <div class="step" id="step-result">
+            <div class="result-section">
+                <span class="label" style="color:#888;">번역 결과</span>
+                <h2 id="translation-word" class="word-result-text">---</h2>
+
+                <button id="btn-search-dict" class="secondary-btn" style="margin-bottom: 20px;">
+                    📖 사전에서 단어 뜻 보기
+                </button>
+
+                <div class="video-player-box">
+                    <div id="result-video-placeholder">▶ 영상 로딩 중...</div>
+                </div>
+
+                <div class="toggle-wrapper">
+                    <span>원본 영상</span>
+                    <label class="switch">
+                        <input type="checkbox" id="keypoint-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                    <span>Keypoint</span>
+                </div>
+
+                <button onclick="window.goHome()" class="secondary-btn" style="margin-top: 25px;">처음으로</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="dictionary-app" class="container hidden">
+    <button class="back-btn" onclick="goHome()">← 메인으로</button>
+    <h1>수어 사전</h1>
+    <p class="subtitle">단어를 검색하여 수어를 배워보세요</p>
+
+    <div class="search-container">
+        <input type="text" id="dict-search-input" placeholder="검색어 입력 (예: 안녕)" />
+        <button id="dict-search-btn" class="search-btn">🔍</button>
+    </div>
+
+    <div id="dict-video-area" class="hidden" style="margin-bottom: 20px;">
+        <div class="video-player-box" style="height: 200px;">
+            <div class="placeholder-video" style="color:white;">▶ 사전 영상 재생 중...</div>
+        </div>
+        <p id="dict-playing-word" style="text-align: center; font-weight: bold; color: #3498db;"></p>
+    </div>
+
+    <div id="dict-result-list" class="dict-result-list">
+        <div class="empty-state">검색어를 입력해주세요.</div>
+    </div>
+</div>
+
+<div id="game-app" class="container hidden">
+    <button class="back-btn" onclick="goHome()">← 메인으로</button>
+    <h1>수어 게임</h1>
+    <div style="text-align: center; padding: 60px 0;">
+        <div style="font-size: 4rem; margin-bottom: 20px;">🎮</div>
+        <h3>오픈 준비 중입니다!</h3>
+    </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
