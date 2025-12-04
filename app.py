@@ -8,6 +8,7 @@ from flask import Flask, render_template, request, jsonify, Response, send_from_
 from werkzeug.utils import secure_filename
 import threading
 from model_interface import SignLanguageTranslator, TranslationResult, VideoInfo, FrameKeypoints
+from pathlib import Path
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -50,7 +51,7 @@ def load_dictionary_data():
         file_id = f"{i:04d}"
         
         # json 파일
-        json_filename = f"NIA_SL_WORD{file_id}_REAL01_F_morpheme.json"
+        json_filename = f"NIA_SL_WORD{file_id}_REAL02_F_morpheme.json"
         json_filepath = os.path.join(JSON_DIR, json_filename)
         
         # mp4 파일
@@ -188,8 +189,33 @@ def run_translation_in_thread(file_id, task_data):
         # 번역 결과 업데이트
         task_data['status'] = 'completed' if result.success else 'error'
         task_data['word'] = result.word # 번역된 단어
-        task_data['annotated_path'] = result.annotated_video_path # annotated된 영상의 경로
         task_data['error'] = result.error
+
+        # annotated 비디오 경로 확인 및 로깅
+        annotated_path = None
+        if result.success and result.annotated_video_path:
+            annotated_path = result.annotated_video_path
+            logger.info(f"번역 완료 - Annotated 비디오 경로: {annotated_path}")
+            
+            # 상대 경로 확인
+            if os.path.exists(annotated_path):
+                file_size = os.path.getsize(annotated_path)
+                logger.info(f"Annotated 비디오 파일 확인됨. 크기: {file_size} bytes")
+                task_data['annotated_path'] = annotated_path
+            else:
+                logger.warning(f"Annotated 비디오 경로는 있지만 파일이 존재하지 않음: {annotated_path}")
+                # 절대 경로로 변환 시도
+                abs_path = os.path.abspath(annotated_path)
+                if os.path.exists(abs_path):
+                    logger.info(f"절대 경로로 변환 후 파일 발견: {abs_path}")
+                    task_data['annotated_path'] = abs_path
+                else:
+                    logger.error(f"절대 경로로도 파일을 찾을 수 없음: {abs_path}")
+                    # 파일이 없으면 annotated_path를 None으로 설정
+                    task_data['annotated_path'] = None
+        else:
+            logger.warning(f"번역 결과에 annotated_video_path가 없습니다. success={result.success}, path={result.annotated_video_path}")
+            task_data['annotated_path'] = None
 
         # 최종 진행 상황 업데이트
         update_task_status(file_id, 100 if result.success else task_data['progress'], 
@@ -271,10 +297,20 @@ def stream_progress(task_id):
             if current_status == 'completed':
                 # 최종 완료 이벤트 전송
                 word = TASK_STATUS[task_id]['word']
+                annotated_path = TASK_STATUS[task_id].get('annotated_path')
+                
+                # annotated 비디오가 실제로 존재하는지 확인
+                annotated_video_url = None
+                if annotated_path and os.path.exists(annotated_path):
+                    annotated_video_url = f'/api/video/annotated/{task_id}'
+                    logger.info(f"Complete 이벤트 전송: annotated_video_url={annotated_video_url}")
+                else:
+                    logger.warning(f"Complete 이벤트 전송: annotated 비디오가 없습니다. path={annotated_path}")
+                
                 complete_data = json.dumps({
                     'word': word,
                     'task_id': task_id,
-                    'annotated_video_url': f'/api/video/annotated/{task_id}'
+                    'annotated_video_url': annotated_video_url  # None일 수 있음
                 })
                 yield f"event: complete\ndata: {complete_data}\n\n"
                 break
@@ -346,8 +382,15 @@ def get_video_path(video_type, identifier):
             logger.info(f"이 작업의 비디오 경로는 original_path: {task_data.get('original_path')}")
             return task_data.get('original_path')
         elif video_type == 'annotated': # annotated 영상을 찾는 경우
-            logger.info(f"이 작업의 비디오 경로는 annotated_path: {task_data.get('annotated_path')}")
-            return task_data.get('annotated_path')
+            annotated_path = task_data.get('annotated_path')
+            logger.info(f"이 작업의 비디오 경로는 annotated_path: {annotated_path}")
+            if annotated_path and os.path.exists(annotated_path):
+                logger.info(f"Annotated 비디오 파일 존재 확인: {annotated_path}")
+            elif annotated_path:
+                logger.warning(f"Annotated 비디오 경로는 있지만 파일이 존재하지 않음: {annotated_path}")
+            else:
+                logger.warning(f"Annotated 비디오 경로가 TASK_STATUS에 없음. Task 데이터: {task_data}")
+            return annotated_path
             
     return None
 
@@ -364,21 +407,35 @@ def serve_video(video_type, identifier):
     # 실제 파일 경로 획득
     filepath = get_video_path(video_type, identifier)
     
-    if not filepath or not os.path.exists(filepath):
+    # 디버깅 로그
+    logger.info(f"비디오 요청: Type={video_type}, ID={identifier}, Path={filepath}")
+    
+    if not filepath:
+        logger.error(f"비디오 경로를 찾을 수 없습니다. (Type: {video_type}, ID: {identifier})")
+        if video_type == 'annotated' and identifier in TASK_STATUS:
+            task_data = TASK_STATUS[identifier]
+            logger.error(f"TASK_STATUS 정보: {task_data}")
+        return jsonify({'error': f'비디오 경로를 찾을 수 없습니다: {identifier}'}), 404
+    
+    if not os.path.exists(filepath):
         # 파일이 없으면 404
-        # NOTE: dictionary 타입의 경우 파일 이름만 있고 실제 파일은 없을 수 있음 (테스트 환경)
-        logger.error(f"요청하신 영상 파일을 찾을 수 없습니다. (Type: {video_type}, ID: {identifier}, Path: {filepath})")
+        logger.error(f"요청하신 영상 파일이 존재하지 않습니다. (Type: {video_type}, ID: {identifier}, Path: {filepath})")
+        
         # 실제 환경에서 dictionary 영상이 없으면 임시 placeholder를 반환하거나 404 처리
         if video_type == 'dictionary':
-             # dictionary 영상이 없으면 임시로 빈 파일 생성 후 스트리밍을 시도하거나, 
-             # 여기서는 단순하게 404를 반환하도록 하겠습니다.
              return jsonify({'error': f'사전 영상 파일을 찾을 수 없습니다: {identifier}'}), 404
         
         # 번역 결과 영상이 아직 완료되지 않았을 수도 있음
-        if video_type == 'annotated' and identifier in TASK_STATUS and TASK_STATUS[identifier].get('status') == 'processing':
-             return jsonify({'error': f'번역 작업이 아직 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.'}), 404
+        if video_type == 'annotated' and identifier in TASK_STATUS:
+            task_status = TASK_STATUS[identifier].get('status')
+            logger.error(f"Annotated 비디오 파일이 없습니다. Task 상태: {task_status}, 경로: {filepath}")
+            if task_status == 'processing':
+                return jsonify({'error': f'번역 작업이 아직 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.'}), 404
+            elif task_status == 'completed':
+                # 완료되었는데 파일이 없으면 경로 문제일 수 있음
+                return jsonify({'error': f'번역은 완료되었지만 영상 파일을 찾을 수 없습니다. 경로: {filepath}'}), 404
 
-        return jsonify({'error': f'요청하신 영상 파일을 찾을 수 없습니다: {identifier}'}), 404
+        return jsonify({'error': f'요청하신 영상 파일을 찾을 수 없습니다: {identifier}, 경로: {filepath}'}), 404
 
 
     # 파일이 위치한 디렉토리를 기준으로 send_from_directory를 사용해야 합니다.

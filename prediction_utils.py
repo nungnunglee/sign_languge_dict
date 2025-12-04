@@ -225,10 +225,16 @@ class SignLanguagePredictor:
         standardized_kps = (all_kps_xy - mean) / std
         return standardized_kps.flatten()
 
-    def __call__(self, raw_kps: Dict[str, list]) -> Optional[Tuple[str, float]]:
+    def __call__(self, raw_kps: Dict[str, list]) -> Optional[List[Optional[Tuple[str, float]]]]:
         """
         처리된 키포인트를 입력받아 버퍼에 저장하고,
-        버퍼가 가득 차면 추론을 실행하여 (단어, 신뢰도)를 반환합니다.
+        버퍼가 가득 차면 추론을 실행하여 모든 프레임에 대한 (단어, 신뢰도) 리스트를 반환합니다.
+        'null' 클래스가 예측된 경우 None을 반환합니다.
+        
+        Returns:
+            None: 아직 추론할 때가 아님
+            List[Optional[Tuple[str, float]]]: 청크 내 모든 프레임의 예측 결과 
+                [(word, conf), ...] 또는 None ('null' 클래스인 경우)
         """
         # 1. 전처리
         processed_kps = self.preprocess(raw_kps)
@@ -244,20 +250,111 @@ class SignLanguagePredictor:
                 ).unsqueeze(0).to(self.device)
                 
                 logits, new_mems = self.model(input_tensor, self.mems)
-                last_step_logits = logits[:, -1, :]
+                # 모든 프레임에 대해 예측 수행 (chunk_size, num_classes)
+                all_logits = logits[0]  # (chunk_size, num_classes)
 
-                probs = F.softmax(last_step_logits, dim=1)
-                confidence_tensor, pred_index_tensor = torch.max(probs, dim=1)
+                probs = F.softmax(all_logits, dim=1)  # (chunk_size, num_classes)
                 
-                pred_index = pred_index_tensor.item()
-                conf_value = confidence_tensor.item()
-                predicted_word = self.class_names[pred_index]
+                # null 클래스 인덱스 찾기
+                null_index = None
+                try:
+                    null_index = self.class_names.index('null')
+                except ValueError:
+                    pass  # null 클래스가 없으면 무시
+                
+                # 모든 프레임의 예측 결과를 리스트로 변환
+                predictions = []
+                for i in range(self.chunk_size):
+                    frame_probs = probs[i]  # (num_classes,)
+                    
+                    # max 값과 인덱스 가져오기
+                    max_conf, max_idx = torch.max(frame_probs, dim=0)
+                    max_idx = max_idx.item()
+                    max_conf = max_conf.item()
+                    
+                    # null이 max이고 null 클래스가 있는 경우, 다음으로 큰 값 선택
+                    if null_index is not None and max_idx == null_index:
+                        # null을 제외한 확률에서 max 찾기
+                        non_null_probs = frame_probs.clone()
+                        non_null_probs[null_index] = -1.0  # null 확률을 매우 낮게 설정
+                        second_max_conf, second_max_idx = torch.max(non_null_probs, dim=0)
+                        second_max_idx = second_max_idx.item()
+                        second_max_conf = second_max_conf.item()
+                        
+                        # 다음으로 큰 값이 유효한 경우 사용
+                        if second_max_conf > 0:
+                            pred_index = second_max_idx
+                            conf_value = second_max_conf
+                        else:
+                            # 유효한 값이 없으면 None
+                            predictions.append(None)
+                            continue
+                    else:
+                        pred_index = max_idx
+                        conf_value = max_conf
+                    
+                    predicted_word = self.class_names[pred_index]
+                    # 'null' 클래스는 제외 (이미 처리했지만 안전을 위해)
+                    if predicted_word != 'null':
+                        predictions.append((predicted_word, conf_value))
+                    else:
+                        predictions.append(None)
             
             # 4. 상태 업데이트
             self.mems = new_mems
             self.keypoint_buffer = [] # 버퍼 비우기
             
-            return predicted_word, conf_value
+            return predictions
+        
+        return None # 아직 추론할 때가 아님
+
+    def get_probability_distributions(self, raw_kps: Dict[str, list]) -> Optional[List[Dict[str, float]]]:
+        """
+        처리된 키포인트를 입력받아 버퍼에 저장하고,
+        버퍼가 가득 차면 추론을 실행하여 모든 프레임에 대한 전체 확률 분포를 반환합니다.
+        
+        Returns:
+            None: 아직 추론할 때가 아님
+            List[Dict[str, float]]: 청크 내 모든 프레임의 확률 분포 
+                [{"word1": prob1, "word2": prob2, ...}, ...]
+        """
+        # 1. 전처리
+        processed_kps = self.preprocess(raw_kps)
+        
+        # 2. 버퍼링
+        self.keypoint_buffer.append(processed_kps)
+        
+        # 3. 추론
+        if len(self.keypoint_buffer) == self.chunk_size:
+            with torch.no_grad():
+                input_tensor = torch.tensor(
+                    np.array(self.keypoint_buffer), dtype=torch.float32
+                ).unsqueeze(0).to(self.device)
+                
+                logits, new_mems = self.model(input_tensor, self.mems)
+                # 모든 프레임에 대해 예측 수행 (chunk_size, num_classes)
+                all_logits = logits[0]  # (chunk_size, num_classes)
+
+                probs = F.softmax(all_logits, dim=1)  # (chunk_size, num_classes)
+                
+                # 모든 프레임의 확률 분포를 딕셔너리 리스트로 변환
+                probability_distributions = []
+                for i in range(self.chunk_size):
+                    frame_probs = probs[i]  # (num_classes,)
+                    
+                    # 각 단어에 대한 확률을 딕셔너리로 변환
+                    frame_dist = {}
+                    for j, class_name in enumerate(self.class_names):
+                        prob_value = frame_probs[j].item()
+                        frame_dist[class_name] = prob_value
+                    
+                    probability_distributions.append(frame_dist)
+            
+            # 4. 상태 업데이트
+            self.mems = new_mems
+            self.keypoint_buffer = [] # 버퍼 비우기
+            
+            return probability_distributions
         
         return None # 아직 추론할 때가 아님
 

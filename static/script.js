@@ -8,6 +8,8 @@ const state = {
     recordedBlob: null,
     eventSource: null,
     showKeypoints: false,
+    annotatedVideoUrl: null,
+    originalVideoUrl: null,
 };
 
 const elements = {
@@ -42,12 +44,12 @@ const elements = {
     nav1: document.getElementById('nav-1'),
     nav2: document.getElementById('nav-2'),
     nav3: document.getElementById('nav-3'),
-    taskIdDisplay: document.getElementById('task-id-display'),
     progressBarFill: document.getElementById('progress-bar-fill'),
     progressMessage: document.getElementById('progress-message'),
     translationWord: document.getElementById('translation-word'),
 
     // 결과 화면 요소
+    resultVideoPlayer: document.getElementById('result-video-player'),
     resultVideoPlaceholder: document.getElementById('result-video-placeholder'),
     keypointToggle: document.getElementById('keypoint-toggle'),
     btnSearchDict: document.getElementById('btn-search-dict'), // [신규]
@@ -57,6 +59,8 @@ const elements = {
     dictSearchBtn: document.getElementById('dict-search-btn'),
     dictResultList: document.getElementById('dict-result-list'),
     dictVideoArea: document.getElementById('dict-video-area'),
+    dictVideoPlayer: document.getElementById('dict-video-player'),
+    dictVideoPlaceholder: document.querySelector('.placeholder-video'),
     dictPlayingWord: document.getElementById('dict-playing-word'),
 
     // 토스트
@@ -87,6 +91,15 @@ elements.cardDictionary.addEventListener('click', () => {
     elements.dictSearchInput.value = '';
     elements.dictResultList.innerHTML = '<div class="empty-state">검색어를 입력해주세요.</div>';
     elements.dictVideoArea.classList.add('hidden');
+    // 비디오 초기화
+    if (elements.dictVideoPlayer) {
+        elements.dictVideoPlayer.pause();
+        elements.dictVideoPlayer.src = '';
+        elements.dictVideoPlayer.style.display = 'none';
+    }
+    if (elements.dictVideoPlaceholder) {
+        elements.dictVideoPlaceholder.style.display = 'block';
+    }
 });
 
 elements.cardGame.addEventListener('click', () => {
@@ -119,6 +132,19 @@ function resetUploadState() {
     elements.statusText.textContent = "여기를 클릭하여 파일 선택";
     state.recordedBlob = null;
     elements.fileInput.value = "";
+    // 비디오 초기화
+    if (elements.resultVideoPlayer) {
+        elements.resultVideoPlayer.pause();
+        elements.resultVideoPlayer.src = '';
+        elements.resultVideoPlayer.style.display = 'none';
+    }
+    if (elements.resultVideoPlaceholder) {
+        elements.resultVideoPlaceholder.style.display = 'block';
+        elements.resultVideoPlaceholder.innerHTML = '▶ 영상 로딩 중...';
+    }
+    state.annotatedVideoUrl = null;
+    state.originalVideoUrl = null;
+    state.currentTaskId = null;
 }
 
 elements.btnModeFile.addEventListener('click', () => switchMode('file'));
@@ -241,7 +267,6 @@ async function startTranslation() {
 
 function connectSSE(taskId) {
     state.currentTaskId = taskId;
-    elements.taskIdDisplay.textContent = taskId;
     if (state.eventSource) state.eventSource.close();
     state.eventSource = new EventSource(`/api/translate/progress/${taskId}`);
 
@@ -259,6 +284,27 @@ function connectSSE(taskId) {
         elements.progressBarFill.style.width = `100%`;
         elements.progressMessage.textContent = "완료!";
 
+        // 비디오 URL 저장
+        state.annotatedVideoUrl = data.annotated_video_url || null; // null일 수 있음
+        state.originalVideoUrl = `/api/video/original/${state.currentTaskId}`;
+
+        console.log('Complete 이벤트 수신:', {
+            taskId: state.currentTaskId,
+            annotatedVideoUrl: state.annotatedVideoUrl,
+            originalVideoUrl: state.originalVideoUrl,
+            data: data
+        });
+
+        // annotated 비디오가 없으면 키포인트 토글 비활성화
+        if (!state.annotatedVideoUrl) {
+            console.warn('Annotated 비디오 URL이 없습니다. 키포인트 토글을 비활성화합니다.');
+            elements.keypointToggle.disabled = true;
+            elements.keypointToggle.title = '주석 처리된 비디오를 사용할 수 없습니다';
+        } else {
+            elements.keypointToggle.disabled = false;
+            elements.keypointToggle.title = '';
+        }
+
         state.showKeypoints = false;
         elements.keypointToggle.checked = false;
         updateResultVideo();
@@ -273,10 +319,175 @@ elements.keypointToggle.addEventListener('change', (e) => {
     updateResultVideo();
 });
 
+// 네트워크 상태 이름 반환 헬퍼 함수
+function getNetworkStateName(state) {
+    const states = {
+        0: 'NETWORK_EMPTY',
+        1: 'NETWORK_IDLE',
+        2: 'NETWORK_LOADING',
+        3: 'NETWORK_NO_SOURCE'
+    };
+    return states[state] || 'UNKNOWN';
+}
+
+// 준비 상태 이름 반환 헬퍼 함수
+function getReadyStateName(state) {
+    const states = {
+        0: 'HAVE_NOTHING',
+        1: 'HAVE_METADATA',
+        2: 'HAVE_CURRENT_DATA',
+        3: 'HAVE_FUTURE_DATA',
+        4: 'HAVE_ENOUGH_DATA'
+    };
+    return states[state] || 'UNKNOWN';
+}
+
 function updateResultVideo() {
-    elements.resultVideoPlaceholder.innerHTML = state.showKeypoints
-        ? `<span style="color:#e74c3c">💀 Keypoint 영상 재생 중...</span><br><small>(${state.currentTaskId})</small>`
-        : `<span style="color:#3498db">▶ 원본 영상 재생 중...</span><br><small>(${state.currentTaskId})</small>`;
+    if (!state.currentTaskId) {
+        console.log('updateResultVideo: currentTaskId가 없습니다');
+        return;
+    }
+
+    // 비디오 URL 결정
+    let videoUrl = null;
+    if (state.showKeypoints) {
+        // 주석 비디오를 요청한 경우
+        if (state.annotatedVideoUrl) {
+            videoUrl = state.annotatedVideoUrl;
+        } else {
+            // 주석 비디오가 없으면 오류 메시지 표시
+            console.warn('updateResultVideo: 키포인트 모드이지만 annotated 비디오 URL이 없습니다.');
+            elements.resultVideoPlaceholder.innerHTML = `<span style="color:#e74c3c;">⚠️ 주석 처리된 비디오를 사용할 수 없습니다</span>`;
+            elements.resultVideoPlaceholder.style.display = 'block';
+            if (elements.resultVideoPlayer) {
+                elements.resultVideoPlayer.style.display = 'none';
+            }
+            return; // 주석 비디오가 없으면 여기서 종료
+        }
+    } else {
+        // 원본 비디오 요청
+        videoUrl = state.originalVideoUrl;
+    }
+
+    console.log('updateResultVideo:', {
+        showKeypoints: state.showKeypoints,
+        annotatedVideoUrl: state.annotatedVideoUrl,
+        originalVideoUrl: state.originalVideoUrl,
+        selectedVideoUrl: videoUrl
+    });
+
+    if (!videoUrl) {
+        console.warn('updateResultVideo: 비디오 URL이 없습니다');
+        elements.resultVideoPlaceholder.innerHTML = `<span style="color:#888;">영상 준비 중...</span>`;
+        elements.resultVideoPlaceholder.style.display = 'block';
+        if (elements.resultVideoPlayer) {
+            elements.resultVideoPlayer.style.display = 'none';
+        }
+        return;
+    }
+
+    // 플레이스홀더 숨기기
+    elements.resultVideoPlaceholder.style.display = 'none';
+    
+    // 비디오 플레이어 표시 및 재생
+    if (elements.resultVideoPlayer) {
+        // 기존 비디오 정지 및 초기화
+        elements.resultVideoPlayer.pause();
+        elements.resultVideoPlayer.currentTime = 0;
+        
+        // 캐시 우회를 위해 타임스탬프 추가
+        const separator = videoUrl.includes('?') ? '&' : '?';
+        const videoUrlWithCache = `${videoUrl}${separator}_t=${Date.now()}`;
+        
+        // 새 비디오 URL 설정
+        elements.resultVideoPlayer.src = videoUrlWithCache;
+        elements.resultVideoPlayer.style.display = 'block';
+        
+        // 비디오 로드 이벤트 리스너
+        const handleLoadedData = () => {
+            console.log('비디오 로드 완료:', videoUrlWithCache);
+            elements.resultVideoPlayer.removeEventListener('loadeddata', handleLoadedData);
+            elements.resultVideoPlayer.removeEventListener('error', handleError);
+            
+            // 재생 시도
+            const playPromise = elements.resultVideoPlayer.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log('비디오 재생 성공:', videoUrlWithCache);
+                }).catch(err => {
+                    console.error('비디오 재생 오류:', err, 'URL:', videoUrlWithCache);
+                    // 재생 실패 시 플레이스홀더 표시
+                    elements.resultVideoPlaceholder.style.display = 'block';
+                    elements.resultVideoPlaceholder.innerHTML = `<span style="color:#e74c3c;">⚠️ 비디오 재생 실패</span>`;
+                    elements.resultVideoPlayer.style.display = 'none';
+                });
+            }
+        };
+        
+        const handleError = (e) => {
+            const video = elements.resultVideoPlayer;
+            
+            // 상세 오류 정보 로깅
+            console.error('=== 비디오 로드 오류 상세 정보 ===');
+            console.error('URL:', videoUrlWithCache);
+            console.error('Video src:', video.src);
+            console.error('Network State:', video.networkState, `(${getNetworkStateName(video.networkState)})`);
+            console.error('Ready State:', video.readyState, `(${getReadyStateName(video.readyState)})`);
+            
+            if (video.error) {
+                console.error('Error Code:', video.error.code);
+                console.error('Error Message:', video.error.message);
+                
+                // 오류 코드 상수값 확인
+                console.error('MEDIA_ERR_ABORTED:', video.error.MEDIA_ERR_ABORTED);
+                console.error('MEDIA_ERR_NETWORK:', video.error.MEDIA_ERR_NETWORK);
+                console.error('MEDIA_ERR_DECODE:', video.error.MEDIA_ERR_DECODE);
+                console.error('MEDIA_ERR_SRC_NOT_SUPPORTED:', video.error.MEDIA_ERR_SRC_NOT_SUPPORTED);
+            } else {
+                console.error('Video.error is null - 오류 객체가 없습니다');
+            }
+            console.error('Event:', e);
+            console.error('================================');
+            
+            // 오류 코드별 메시지
+            let errorMessage = '⚠️ 비디오 로드 실패';
+            if (video.error) {
+                switch(video.error.code) {
+                    case video.error.MEDIA_ERR_ABORTED:
+                        errorMessage = '⚠️ 비디오 로드가 중단되었습니다';
+                        break;
+                    case video.error.MEDIA_ERR_NETWORK:
+                        errorMessage = '⚠️ 네트워크 오류로 비디오를 로드할 수 없습니다';
+                        break;
+                    case video.error.MEDIA_ERR_DECODE:
+                        errorMessage = '⚠️ 비디오 디코딩 오류 (코덱 문제일 수 있습니다)';
+                        break;
+                    case video.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                        errorMessage = '⚠️ 비디오 형식을 지원하지 않습니다';
+                        break;
+                    default:
+                        errorMessage = `⚠️ 비디오 로드 실패 (오류 코드: ${video.error.code})`;
+                }
+            } else {
+                errorMessage = '⚠️ 비디오 로드 실패 (오류 정보 없음)';
+            }
+            
+            elements.resultVideoPlayer.removeEventListener('loadeddata', handleLoadedData);
+            elements.resultVideoPlayer.removeEventListener('error', handleError);
+            elements.resultVideoPlaceholder.style.display = 'block';
+            elements.resultVideoPlaceholder.innerHTML = `<span style="color:#e74c3c;">${errorMessage}</span>`;
+            elements.resultVideoPlayer.style.display = 'none';
+        };
+        
+        // 이벤트 리스너 등록
+        elements.resultVideoPlayer.addEventListener('loadeddata', handleLoadedData);
+        elements.resultVideoPlayer.addEventListener('error', handleError);
+        
+        // 비디오 로드 시작
+        elements.resultVideoPlayer.load();
+    } else {
+        console.error('updateResultVideo: resultVideoPlayer 요소를 찾을 수 없습니다');
+    }
 }
 
 // [신규] 결과 화면 -> 사전 자동 검색 연결
@@ -346,8 +557,21 @@ function playDictionaryVideo(item) {
     elements.dictVideoArea.classList.remove('hidden');
     elements.dictPlayingWord.textContent = item.word;
 
-    const placeholder = elements.dictVideoArea.querySelector('.placeholder-video');
-    placeholder.innerHTML = `▶ 사전 영상 재생 중...<br><small>${item.video_url}</small>`;
+    // 플레이스홀더 숨기기
+    if (elements.dictVideoPlaceholder) {
+        elements.dictVideoPlaceholder.style.display = 'none';
+    }
+
+    // 비디오 플레이어 설정
+    elements.dictVideoPlayer.src = item.video_url;
+    elements.dictVideoPlayer.style.display = 'block';
+    
+    // 비디오 로드 및 재생 시도
+    elements.dictVideoPlayer.load();
+    elements.dictVideoPlayer.play().catch(err => {
+        console.error('비디오 재생 오류:', err);
+        showError('비디오 재생 중 오류가 발생했습니다.');
+    });
 
     elements.dictVideoArea.scrollIntoView({ behavior: 'smooth' });
 }
