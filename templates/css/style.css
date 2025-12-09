@@ -1,0 +1,17 @@
+/* static/css/style.css */
+
+/* 1. 기본 설정 (Base) */
+@import 'base.css';
+
+/* 2. 레이아웃 (Layout) - 컨테이너 구조 */
+@import 'layout.css';
+
+/* 3. 컴포넌트 (Components) - 버튼, 카드, 모달 등 UI 요소 */
+@import 'components.css';
+
+/* 4. 애니메이션 (Animations) */
+@import 'animations.css';
+
+/* 5. 각 기능별 모듈 (Modules) */
+@import 'modules/dictionary.css';
+@import 'modules/game.css';

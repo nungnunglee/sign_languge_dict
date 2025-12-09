@@ -1,0 +1,25 @@
+/* static/css/layout.css */
+
+/* 전체 레이아웃 컨테이너 */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* 섹션 간 간격 */
+.section-spacing {
+    margin-bottom: 3rem;
+}
+
+/* 중앙 정렬 래퍼 (flex) */
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 화면 꽉 채우기 */
+.min-h-screen {
+    min-height: 100vh;
+}

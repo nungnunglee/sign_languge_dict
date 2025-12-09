@@ -1,0 +1,26 @@
+/* static/css/modules/dictionary.css */
+
+.result-item {
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.result-item:hover {
+    border-color: var(--success-color, #10b981);
+    background-color: #ecfdf5; /* emerald-50 */
+    transform: translateX(4px);
+}
+
+.result-item.playing {
+    border-color: var(--success-color, #10b981);
+    background-color: #ecfdf5;
+    font-weight: bold;
+    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);
+}
