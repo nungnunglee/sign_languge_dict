@@ -114,7 +114,7 @@ def upload_file():
         return jsonify({'success': False, 'error': '파일 이름이 없습니다.'}), 400
     
     # 허용되는 파일 확장자 확인 (간단한 검증)
-    allowed_extensions = {'mp4', 'mov', 'avi'}
+    allowed_extensions = {'mp4', 'mov', 'avi', 'webm'}
     if '.' not in file.filename or file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
         return jsonify({'success': False, 'error': '지원하지 않는 동영상 형식입니다.'}), 400
 
@@ -122,11 +122,14 @@ def upload_file():
     file_id = str(uuid.uuid4())
     filename = secure_filename(file.filename)
     
+    # 원본 파일의 확장자 추출
+    file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'mp4'
+    
     # task_id로 임시 디렉토리 생성
     task_dir = os.path.join(UPLOAD_FOLDER, file_id)
     os.makedirs(task_dir, exist_ok=True)
 
-    original_path = os.path.join(task_dir, 'original.mp4') # original 영상을 저장시킬 경로
+    original_path = os.path.join(task_dir, f'original.{file_ext}') # original 영상을 저장시킬 경로
     
     try:
         file.save(original_path) # original 영상 저장
