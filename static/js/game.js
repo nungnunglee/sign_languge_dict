@@ -22,7 +22,6 @@ const localState = {
 // === 1. Initialization & Menu ===
 
 export function initGame() {
-    //navigateTo('game');
     state.game.totalScore = 0;
     state.game.level = 1;
 
@@ -64,7 +63,6 @@ export async function loadNextQuestion() {
         console.error(err);
     }
 }
-
 
 function setupMultiChoiceQuiz(quiz) {
     const { target_word, target_id, options } = quiz;
@@ -456,7 +454,6 @@ function openVideoPreview(url) {
 window.toggleGameRecording = toggleRecording;
 window.cancelUpload = resetUploadState;
 window.confirmUpload = submitGameFile;
-window.loadNextQuestion = loadNextQuestion;
 window.initGameRound = () => {
     state.game.mode === 'practice' ? (toggleScreen('quiz'), resetUploadState()) : toggleScreen('multichoice');
 };

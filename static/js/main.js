@@ -1,45 +1,23 @@
 import { elements, state } from './state.js';
 import { navigateTo, showToast } from './utils.js';
-// import { initTranslation, stopWebcamStream } from './translation.js';
-// import { initDictionary } from './dictionary.js';
-// import { initGame, loadNextQuestion } from './game.js';
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Initialize Modules
-    // initTranslation();
-    // initDictionary();
 
     // 2. Event Listeners for Navigation
     elements.cardTranslate?.addEventListener('click', () => navigateTo('translation'));
     elements.cardDictionary?.addEventListener('click', () => navigateTo('dictionary'));
-    // --- Game Card 클릭 핸들러 수정 (Issue 2 해결) ---
-    elements.cardGame?.addEventListener('click', () => {
-        // 1. 화면 전환을 먼저 수행
-        navigateTo('game');
-        
-        // 2. 전역에 노출된 initGame을 호출하여 게임 리셋/시작 로직 실행
-        // (game.html의 스크립트가 로드되었다면 이 함수는 window에 존재합니다.)
-        if (window.initGame) {
-            window.initGame();
-        } else {
-            console.error("Game initialization function (initGame) not found on window.");
-        }
-    });
 
     // 3. Initial Route
-    navigateTo('intro'); // 인트로 화면(메인)으로 이동
 });
 
 // --- Global Window Actions ---
 // HTML의 onclick 속성에서 접근하기 위해 window 객체에 할당
 
-// 인트로 화면(메인)으로 이동
 window.goHome = () => {
-    navigateTo('intro'); // 인트로 화면(메인)으로 이동
     stopWebcamStream(); // 번역기 웹캠 정지
 
-    // 모든 영상 정지
     [elements.resultVideoPlayer, elements.dictVideoPlayer].forEach(v => v?.pause());
 
     // Stop Game Stream

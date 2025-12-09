@@ -4,7 +4,9 @@ import time
 import logging
 import json
 from dataclasses import dataclass, asdict
-from typing import List, Optional, Callable, Dict, Any
+from typing import List, Optional, Callable, Dict, Any, Tuple
+from abc import ABC, abstractmethod
+from collections import defaultdict
 import cv2
 import torch
 import numpy as np
@@ -72,6 +74,290 @@ class VideoProcessingError(Exception):
 class ModelInferenceError(Exception):
     pass
 
+# --- Word Selection Algorithms ---
+
+class WordSelectionAlgorithm(ABC):
+    """최종 단어 선택 알고리즘의 베이스 클래스"""
+    
+    @abstractmethod
+    def select_word(self, predictions: List[Tuple[str, float]], conf_threshold: float) -> str:
+        """
+        예측 결과 리스트에서 최종 단어를 선택
+        
+        Args:
+            predictions: (word, confidence) 튜플 리스트
+            conf_threshold: confidence threshold
+            
+        Returns:
+            선택된 최종 단어 (없으면 빈 문자열)
+        """
+        pass
+
+
+class GroupingAlgorithm(WordSelectionAlgorithm):
+    """기본 그룹화 알고리즘 (기존 model_interface.py 방식)"""
+    
+    def select_word(self, predictions: List[Tuple[str, float]], conf_threshold: float) -> str:
+        """연속된 같은 단어들을 그룹화하여 마지막 그룹의 단어 선택"""
+        if not predictions:
+            return ""
+        
+        # 1. confidence threshold 적용 및 null 제외
+        filtered_predictions = [
+            (word, conf) for word, conf in predictions 
+            if word is not None and word != 'null' and conf >= conf_threshold
+        ]
+        
+        if not filtered_predictions:
+            return ""
+        
+        # 2. 연속된 같은 단어들을 그룹화
+        groups = []
+        current_group = [filtered_predictions[0]]
+        
+        for i in range(1, len(filtered_predictions)):
+            current_word, _ = filtered_predictions[i]
+            prev_word, _ = filtered_predictions[i-1]
+            
+            if current_word == prev_word:
+                # 같은 단어면 현재 그룹에 추가
+                current_group.append(filtered_predictions[i])
+            else:
+                # 다른 단어면 현재 그룹을 저장하고 새 그룹 시작
+                groups.append(current_group)
+                current_group = [filtered_predictions[i]]
+        
+        # 마지막 그룹 추가
+        groups.append(current_group)
+        
+        # 3. 마지막 그룹의 단어 선택
+        if groups:
+            last_group = groups[-1]
+            final_word = last_group[0][0]  # 같은 단어이므로 첫 번째 사용
+            return final_word
+        
+        return ""
+
+
+class SegmentScoringAlgorithm(WordSelectionAlgorithm):
+    """세그먼트 기반 스코어링 알고리즘"""
+    
+    def __init__(
+        self,
+        w_conf: float = 1.0,
+        w_dur: float = 0.5,
+        w_last: float = 2.0,
+        min_duration: int = 5,
+        smoothing_window: int = 5,
+        smoothing_method: str = 'majority'
+    ):
+        """
+        Args:
+            w_conf: confidence 가중치
+            w_dur: duration 가중치
+            w_last: 마지막 세그먼트 보너스 가중치
+            min_duration: 최소 세그먼트 지속 시간 (프레임 수)
+            smoothing_window: 스무딩 윈도우 크기
+            smoothing_method: 'majority' (Majority Voting) 또는 'average' (Moving Average)
+        """
+        self.w_conf = w_conf
+        self.w_dur = w_dur
+        self.w_last = w_last
+        self.min_duration = min_duration
+        self.smoothing_window = smoothing_window
+        self.smoothing_method = smoothing_method
+    
+    def _get_max_word_with_null_skip(self, probabilities: Dict[str, float], null_index: Optional[str] = 'null') -> Tuple[str, float]:
+        """확률 분포에서 null이 max인 경우 다음으로 큰 값 선택"""
+        if null_index and null_index in probabilities:
+            non_null_probs = {k: v for k, v in probabilities.items() if k != null_index}
+            if non_null_probs:
+                max_word = max(non_null_probs.items(), key=lambda x: x[1])
+                return max_word
+        max_word = max(probabilities.items(), key=lambda x: x[1])
+        return max_word
+    
+    def select_word(self, predictions: List[Tuple[str, float]], conf_threshold: float) -> str:
+        """세그먼트 기반 스코어링으로 최종 단어 선택"""
+        if not predictions:
+            return ""
+        
+        # predictions를 프레임별 예측으로 변환 (단순화: predictions가 이미 프레임별 결과라고 가정)
+        # 실제로는 predictions를 그대로 사용하되, None 처리 추가
+        frame_predictions = []
+        for word, conf in predictions:
+            if word is not None and word != 'null' and conf >= conf_threshold:
+                frame_predictions.append((word, conf))
+            else:
+                frame_predictions.append((None, 0.0))
+        
+        if not any(pred[0] for pred in frame_predictions):
+            return ""
+        
+        # Smoothing (전처리)
+        smoothed_predictions = self._apply_smoothing(frame_predictions)
+        
+        if not any(pred[0] for pred in smoothed_predictions):
+            return ""
+        
+        # Segmentation (연속된 같은 예측 구간 그룹화)
+        segments = self._create_segments(smoothed_predictions)
+        
+        if not segments:
+            return ""
+        
+        # Filtering (최소 지속 시간보다 짧은 구간 제거)
+        valid_segments = [seg for seg in segments if seg['duration'] >= self.min_duration]
+        
+        if not valid_segments:
+            return ""
+        
+        # Scoring
+        total_frames = len(smoothed_predictions)
+        segment_scores = {}
+        
+        for i, seg in enumerate(valid_segments):
+            word = seg['word']
+            avg_conf = seg['avg_conf']
+            duration = seg['duration']
+            is_last = (i == len(valid_segments) - 1)
+            
+            # 정규화된 duration (전체 길이 대비)
+            normalized_duration = duration / total_frames if total_frames > 0 else 0
+            
+            # 점수 계산
+            score = (
+                (avg_conf * self.w_conf) +
+                (normalized_duration * self.w_dur) +
+                (1.0 if is_last else 0.0) * self.w_last
+            )
+            
+            # 같은 단어가 여러 세그먼트에 있으면 최고 점수 사용
+            if word not in segment_scores or score > segment_scores[word]:
+                segment_scores[word] = score
+        
+        if not segment_scores:
+            return ""
+        
+        # 최고 점수 단어 선택
+        final_word = max(segment_scores.items(), key=lambda x: x[1])[0]
+        return final_word
+    
+    def _apply_smoothing(self, frame_predictions: List[Tuple[Optional[str], float]]) -> List[Tuple[Optional[str], float]]:
+        """스무딩 적용"""
+        smoothed_predictions = []
+        
+        if self.smoothing_method == 'majority':
+            # Majority Voting
+            for i in range(len(frame_predictions)):
+                start_idx = max(0, i - self.smoothing_window // 2)
+                end_idx = min(len(frame_predictions), i + self.smoothing_window // 2 + 1)
+                window = frame_predictions[start_idx:end_idx]
+                
+                # 유효한 예측만 필터링
+                valid_predictions = [(w, c) for w, c in window if w is not None]
+                
+                if valid_predictions:
+                    # 가장 많이 나타난 단어 선택
+                    word_counts = {}
+                    word_confs = {}
+                    for w, c in valid_predictions:
+                        word_counts[w] = word_counts.get(w, 0) + 1
+                        if w not in word_confs:
+                            word_confs[w] = []
+                        word_confs[w].append(c)
+                    
+                    # 가장 많이 나타난 단어 선택 (동점이면 평균 confidence가 높은 것)
+                    max_count = max(word_counts.values())
+                    candidates = [w for w, count in word_counts.items() if count == max_count]
+                    
+                    # 평균 confidence가 가장 높은 단어 선택
+                    best_word = max(candidates, key=lambda w: sum(word_confs[w]) / len(word_confs[w]))
+                    avg_conf = sum(word_confs[best_word]) / len(word_confs[best_word])
+                    smoothed_predictions.append((best_word, avg_conf))
+                else:
+                    smoothed_predictions.append((None, 0.0))
+        
+        elif self.smoothing_method == 'average':
+            # Moving Average (confidence만 평균화, 단어는 그대로)
+            for i in range(len(frame_predictions)):
+                start_idx = max(0, i - self.smoothing_window // 2)
+                end_idx = min(len(frame_predictions), i + self.smoothing_window // 2 + 1)
+                window = frame_predictions[start_idx:end_idx]
+                
+                # 현재 프레임의 단어 사용
+                current_word, current_conf = frame_predictions[i]
+                
+                if current_word is not None:
+                    # 윈도우 내 같은 단어들의 평균 confidence 계산
+                    same_word_confs = [c for w, c in window if w == current_word]
+                    if same_word_confs:
+                        avg_conf = sum(same_word_confs) / len(same_word_confs)
+                        smoothed_predictions.append((current_word, avg_conf))
+                    else:
+                        smoothed_predictions.append((current_word, current_conf))
+                else:
+                    smoothed_predictions.append((None, 0.0))
+        else:
+            # smoothing 없음
+            smoothed_predictions = frame_predictions
+        
+        return smoothed_predictions
+    
+    def _create_segments(self, smoothed_predictions: List[Tuple[Optional[str], float]]) -> List[Dict[str, Any]]:
+        """세그먼트 생성"""
+        segments = []
+        current_segment_word = None
+        current_segment_confs = []
+        current_segment_start = None
+        
+        for i in range(len(smoothed_predictions)):
+            word, conf = smoothed_predictions[i]
+            
+            if word is not None:
+                if word == current_segment_word:
+                    # 같은 단어면 현재 세그먼트에 추가
+                    current_segment_confs.append(conf)
+                else:
+                    # 다른 단어면 이전 세그먼트 저장
+                    if current_segment_word is not None and current_segment_start is not None:
+                        segments.append({
+                            'word': current_segment_word,
+                            'duration': len(current_segment_confs),
+                            'avg_conf': sum(current_segment_confs) / len(current_segment_confs),
+                            'start_idx': current_segment_start
+                        })
+                    
+                    # 새 세그먼트 시작
+                    current_segment_word = word
+                    current_segment_confs = [conf]
+                    current_segment_start = i
+            else:
+                # None이면 현재 세그먼트 종료 (있는 경우)
+                if current_segment_word is not None and current_segment_start is not None:
+                    segments.append({
+                        'word': current_segment_word,
+                        'duration': len(current_segment_confs),
+                        'avg_conf': sum(current_segment_confs) / len(current_segment_confs),
+                        'start_idx': current_segment_start
+                    })
+                    current_segment_word = None
+                    current_segment_confs = []
+                    current_segment_start = None
+        
+        # 마지막 세그먼트 추가
+        if current_segment_word is not None and current_segment_start is not None:
+            segments.append({
+                'word': current_segment_word,
+                'duration': len(current_segment_confs),
+                'avg_conf': sum(current_segment_confs) / len(current_segment_confs),
+                'start_idx': current_segment_start
+            })
+        
+        return segments
+
+
+
 # --- Main Interface Class ---
 
 class SignLanguageTranslator:
@@ -83,10 +369,17 @@ class SignLanguageTranslator:
         self, 
         model_config_path: str = DEFAULT_MODEL_CONFIG,
         openpose_models_path: str = DEFAULT_OPENPOSE_MODELS,
-        device: Optional[str] = None
+        device: Optional[str] = None,
+        word_selection_algorithm: Optional[WordSelectionAlgorithm] = None
     ):
         """
         모델 초기화
+        
+        Args:
+            model_config_path: 모델 설정 파일 경로
+            openpose_models_path: OpenPose 모델 경로
+            device: 사용할 디바이스 ('cuda' 또는 'cpu')
+            word_selection_algorithm: 최종 단어 선택 알고리즘 (None이면 기본 세그먼트 알고리즘 사용)
         """
         self.logger = logging.getLogger(self.__class__.__name__)
         self.model_config_path = model_config_path
@@ -98,6 +391,20 @@ class SignLanguageTranslator:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             
         self.logger.info(f"Initializing SignLanguageTranslator on {self.device}...")
+        
+        # 최종 단어 선택 알고리즘 설정
+        if word_selection_algorithm is not None:
+            self.word_selection_algorithm = word_selection_algorithm
+        else:
+            # 기본값: 세그먼트 기반 스코어링 알고리즘 (튜닝된 최적 가중치)
+            self.word_selection_algorithm = SegmentScoringAlgorithm(
+                w_conf=5.1,
+                w_dur=7.6,
+                w_last=0.0,
+                min_duration=9
+            )
+            algorithm_name = self.word_selection_algorithm.__class__.__name__
+            self.logger.info(f"Using word selection algorithm: {algorithm_name}")
         
         # 모델 로드
         try:
@@ -309,40 +616,8 @@ class SignLanguageTranslator:
             if progress_callback:
                 progress_callback(100, "Finalizing results...")
                 
-            # Select final word: conf threshold 적용 후 null 제외, 인접한 단어 그룹화하여 마지막 그룹의 단어 선택
-            final_word = ""
-            if predictions:
-                # 1. confidence threshold 적용 및 null 제외
-                filtered_predictions = [
-                    (word, conf) for word, conf in predictions 
-                    if word is not None and word != 'null' and conf >= conf_threshold
-                ]
-                
-                if filtered_predictions:
-                    # 2. 연속된 같은 단어들을 그룹화
-                    groups = []
-                    current_group = [filtered_predictions[0]]
-                    
-                    for i in range(1, len(filtered_predictions)):
-                        current_word, _ = filtered_predictions[i]
-                        prev_word, _ = filtered_predictions[i-1]
-                        
-                        if current_word == prev_word:
-                            # 같은 단어면 현재 그룹에 추가
-                            current_group.append(filtered_predictions[i])
-                        else:
-                            # 다른 단어면 현재 그룹을 저장하고 새 그룹 시작
-                            groups.append(current_group)
-                            current_group = [filtered_predictions[i]]
-                    
-                    # 마지막 그룹 추가
-                    groups.append(current_group)
-                    
-                    # 3. 마지막 그룹의 단어 선택
-                    if groups:
-                        last_group = groups[-1]
-                        # 그룹 내에서 가장 높은 신뢰도의 단어 선택 (또는 첫 번째 단어)
-                        final_word = last_group[0][0]  # 같은 단어이므로 첫 번째 사용
+            # Select final word: 설정된 알고리즘 사용
+            final_word = self.word_selection_algorithm.select_word(predictions, conf_threshold)
                 
             processing_time = time.time() - start_time
             

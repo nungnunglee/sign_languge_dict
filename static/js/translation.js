@@ -95,8 +95,6 @@ export function stopWebcamStream() {
     }
 }
 
-window.stopWebcamStream = stopWebcamStream;
-
 function startRecording() {
     if (!state.webcamStream) return;
     state.recordedChunks = [];

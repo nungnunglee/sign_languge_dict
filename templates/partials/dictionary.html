@@ -1,0 +1,42 @@
+<section id="dictionary-app" class="glass-container max-w-2xl w-full hidden fade-in relative min-h-[500px]" aria-label="수어 사전">
+
+    <header class="relative mb-10 text-center pt-2">
+        <button onclick="goHome()" class="absolute top-0 left-0 text-slate-400 hover:text-emerald-600 transition-colors py-2 group" aria-label="메인으로">
+            <i class="fa-solid fa-arrow-left mr-1 group-hover:-translate-x-1 transition-transform" aria-hidden="true"></i> 메인
+        </button>
+
+        <div class="pt-4 inline-block relative">
+            <span class="block text-xs font-bold text-emerald-500 tracking-widest uppercase mb-1 animate-fade-in-up">Search</span>
+            <h2 class="relative z-10 text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-700 via-emerald-600 to-slate-700 tracking-tight pb-1">
+                수어 사전
+            </h2>
+            <div class="absolute bottom-2 left-0 w-full h-3 bg-emerald-200/60 -z-0 rounded-sm transform -rotate-1 scale-105 origin-bottom-left"></div>
+        </div>
+    </header>
+
+    <div class="relative mb-8 group">
+        <input type="text" id="dict-search-input"
+               placeholder="검색어를 입력하세요 (예: 사랑, 감사)"
+               class="w-full pl-6 pr-14 py-4 bg-slate-50 border-2 border-slate-100 focus:border-emerald-400 rounded-2xl outline-none transition-all text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md">
+        <button id="dict-search-btn" class="absolute right-3 top-3 bg-emerald-500 hover:bg-emerald-600 text-white w-10 h-10 rounded-xl transition-transform active:scale-95 flex items-center justify-center shadow-emerald-200 shadow-lg" aria-label="검색">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <div id="dict-video-area" class="hidden mb-6 animate-fade-in">
+        <div class="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-lg ring-1 ring-black/5">
+            <video id="dict-video-player" controls loop playsinline class="hidden w-full h-full object-contain"></video>
+            <div id="dict-video-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 bg-slate-100">
+                <i class="fa-regular fa-image text-3xl mb-2 opacity-50"></i>
+                <span>영상 로딩 중...</span>
+            </div>
+        </div>
+        <div class="mt-4 text-center">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Selected Word</span>
+            <p id="dict-playing-word" class="text-2xl font-bold text-emerald-600 mt-1"></p>
+        </div>
+    </div>
+
+    <div id="dict-result-list" class="flex flex-col gap-2 max-h-[350px] overflow-y-auto custom-scrollbar p-1">
+        </div>
+</section>

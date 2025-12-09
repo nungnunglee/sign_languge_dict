@@ -22,20 +22,14 @@ def _run_game_evaluation_task(file_id: str, task_data: Dict[str, Any], target_wo
     [Background Task] 사용자 영상 채점 및 결과 업데이트
     """
     try:
-        result = translator.evaluate_attempt(
-            user_video_path=task_data['original_path'],
-            target_word=target_word,
             progress_callback=lambda p, m: update_task_status(file_id, p, m)
         )
 
         update_task_status(
             file_id, 100,
-            f"결과: {result.recognized_word}",
             status='completed',
-            result=asdict(result)
         )
     except Exception as e:
-        logger.error(f"Game Evaluation Error: {e}")
         update_task_status(file_id, 0, "채점 중 시스템 오류 발생", status='error', error=str(e))
 
 
