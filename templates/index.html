@@ -2,151 +2,66 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>수어 마스터 AI</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>AI 수어(단어) 사전 플랫폼</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+<body class="bg-gradient-to-br from-slate-50 to-slate-200 min-h-screen flex items-center justify-center py-10 px-6 md:px-24 lg:px-40 font-pretendard relative overflow-hidden">
 
-<div id="intro-screen" class="container intro-container">
-    <h1>수어 마스터 AI</h1>
-    <p class="subtitle">서비스를 선택해주세요</p>
-
-    <div class="card-grid">
-        <div class="card" id="card-translate">
-            <div class="card-icon">🗣️</div>
-            <h2>수어 검색</h2>
-            <p>내 동작을<br>텍스트로 변환</p>
-        </div>
-        <div class="card" id="card-dictionary">
-            <div class="card-icon">📖</div>
-            <h2>수어 사전</h2>
-            <p>단어 검색<br>및 동영상 학습</p>
-        </div>
-        <div class="card" id="card-game">
-            <div class="card-icon">🎮</div>
-            <h2>수어 게임</h2>
-            <p>퀴즈로 배우는<br>재미있는 수어</p>
-        </div>
-    </div>
-</div>
-
-<div id="translation-app" class="container hidden">
-    <button class="back-btn" onclick="goHome()">← 메인으로</button>
-
-    <h1>수어 검색</h1>
-
-    <div class="stepper-nav">
-        <div class="nav-item active" id="nav-1"><div class="nav-circle">1</div><span>입력</span></div>
-        <div class="nav-item" id="nav-2"><div class="nav-circle">2</div><span>분석</span></div>
-        <div class="nav-item" id="nav-3"><div class="nav-circle">3</div><span>결과</span></div>
+    <div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
+        <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div class="absolute top-[-10%] right-[-10%] w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
     </div>
 
-    <div class="step-container">
-        <div class="step active" id="step-upload">
-            <div class="mode-switch">
-                <button id="btn-mode-file" class="mode-btn active">📁 파일 업로드</button>
-                <button id="btn-mode-cam" class="mode-btn">📹 웹캠 촬영</button>
-            </div>
+    <main id="main-container" class="w-full flex justify-center items-center">
+        {% include 'partials/intro.html' %}
+        {% include 'partials/translation.html' %}
+        {% include 'partials/dictionary.html' %}
+        {% include 'partials/game.html' %}
+    </main>
 
-            <div id="mode-file-area">
-                <div id="drop-area" class="drop-area">
-                    <input type="file" id="video-file-input" accept="video/*" class="file-input-hidden">
-                    <div class="icon-area">📁</div>
-                    <p class="status-text"><span>여기를 클릭하여 파일 선택</span></p>
-                </div>
-            </div>
+    <button onclick="openSidebar()"
+            class="fixed bottom-8 right-8 z-30 w-14 h-14 flex items-center justify-center bg-white text-slate-600 rounded-full shadow-lg border border-slate-100 hover:text-indigo-600 hover:scale-110 transition-all duration-300"
+            title="파일 보관함 열기"
+            aria-label="파일 보관함">
+        <i class="fa-solid fa-folder-closed text-xl"></i>
+    </button>
 
-            <div id="mode-cam-area" class="hidden">
-                <div class="cam-container">
-                    <video id="cam-preview" autoplay muted playsinline></video>
-                    <div id="recording-indicator" class="hidden">REC</div>
-                </div>
-                <div class="cam-controls">
-                    <button id="btn-start-record" class="secondary-btn">🔴 녹화 시작</button>
-                    <button id="btn-stop-record" class="secondary-btn hidden">⬛ 녹화 종료</button>
-                </div>
-                <p id="cam-status-text" style="text-align: center; color: #888; margin-top: 10px;">준비됨</p>
-            </div>
+    <aside id="file-sidebar"
+           class="fixed top-6 bottom-6 right-6 w-96 flex flex-col bg-white/95 backdrop-blur shadow-2xl z-50 rounded-3xl border border-white/50 transform translate-x-[150%] transition-transform duration-300 ease-in-out"
+           aria-label="파일 보관함 사이드바">
 
-            <div class="submit-area">
-                <button id="upload-button" disabled class="main-btn">다음 단계로</button>
-            </div>
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-slate-800">
+                <i class="fa-solid fa-folder-open text-indigo-500 mr-2"></i>파일 보관함
+            </h3>
+            <button onclick="closeSidebar()" class="text-slate-400 hover:text-slate-600 transition-colors" aria-label="닫기">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
         </div>
 
-        <div class="step" id="step-translate">
-            <div class="progress-section">
-                <div class="loader-icon">🤖</div>
-                <div class="progress-bar-container">
-                    <div id="progress-bar-fill" class="progress-bar-fill"></div>
-                </div>
-                <p><span id="progress-message">분석 준비 중...</span></p>
-            </div>
+        <div id="sidebar-list" class="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
+            <div class="text-center text-slate-400 mt-10 text-sm">보관된 파일이 없습니다.</div>
         </div>
+    </aside>
 
-        <div class="step" id="step-result">
-            <div class="result-section">
-                <span class="label" style="color:#888;">번역 결과</span>
-                <h2 id="translation-word" class="word-result-text">---</h2>
-
-                <button id="btn-search-dict" class="secondary-btn" style="margin-bottom: 20px;">
-                    📖 사전에서 단어 뜻 보기
-                </button>
-
-                <div class="video-player-box">
-                    <video id="result-video-player" controls style="width: 100%; height: 100%; object-fit: contain; display: none;"></video>
-                    <div id="result-video-placeholder">▶ 영상 로딩 중...</div>
-                </div>
-
-                <div class="toggle-wrapper">
-                    <span>원본 영상</span>
-                    <label class="switch">
-                        <input type="checkbox" id="keypoint-toggle">
-                        <span class="slider round"></span>
-                    </label>
-                    <span>Keypoint</span>
-                </div>
-
-                <button onclick="window.goHome()" class="secondary-btn" style="margin-top: 25px;">처음으로</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="dictionary-app" class="container hidden">
-    <button class="back-btn" onclick="goHome()">← 메인으로</button>
-    <h1>수어 사전</h1>
-    <p class="subtitle">단어를 검색하여 수어를 배워보세요</p>
-
-    <div class="search-container">
-        <input type="text" id="dict-search-input" placeholder="검색어 입력 (예: 안녕)" />
-        <button id="dict-search-btn" class="search-btn">🔍</button>
+    <div id="sidebar-overlay"
+         class="fixed inset-0 bg-black/20 backdrop-blur-sm hidden z-40 transition-opacity"
+         onclick="closeSidebar()"
+         aria-hidden="true">
     </div>
 
-    <div id="dict-video-area" class="hidden" style="margin-bottom: 20px;">
-        <div class="video-player-box" style="height: 200px;">
-            <video id="dict-video-player" controls style="width: 100%; height: 100%; object-fit: contain; display: none;"></video>
-            <div class="placeholder-video" style="color:white;">▶ 사전 영상 재생 중...</div>
-        </div>
-        <p id="dict-playing-word" style="text-align: center; font-weight: bold; color: #3498db;"></p>
-    </div>
+    <div id="toast-container" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col gap-3 z-50 pointer-events-none"></div>
 
-    <div id="dict-result-list" class="dict-result-list">
-        <div class="empty-state">검색어를 입력해주세요.</div>
-    </div>
-</div>
-
-<div id="game-app" class="container hidden">
-    <button class="back-btn" onclick="goHome()">← 메인으로</button>
-    <h1>수어 게임</h1>
-    <div style="text-align: center; padding: 60px 0;">
-        <div style="font-size: 4rem; margin-bottom: 20px;">🎮</div>
-        <h3>오픈 준비 중입니다!</h3>
-    </div>
-</div>
-
-<div id="toast-container" class="toast-container"></div>
-
-<script src="{{ url_for('static', filename='script.js') }}" defer></script>
+    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
