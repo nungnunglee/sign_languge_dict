@@ -1,5 +1,6 @@
-<section id="translation-app" class="glass-container max-w-2xl w-full hidden relative fade-in" aria-label="수어 번역기">
+<section id="translation-app" class="glass-container max-w-2xl w-full hidden relative fade-in **h-full**" aria-label="수어 번역기">
 
+    <!-- 스타일 css대신 -->
     <style>
         /* 기본 상태: 유리 질감 */
         #translation-app .step-circle {
@@ -26,10 +27,13 @@
         }
     </style>
 
+    <!-- 헤더 -->
     <header class="relative mb-10 text-center">
+        <!-- 메인 화면으로 -->
         <button onclick="goHome()" class="absolute top-0 left-0 text-slate-400 hover:text-indigo-600 transition-colors py-2 group" aria-label="메인으로">
             <i class="fa-solid fa-arrow-left mr-1 group-hover:-translate-x-1 transition-transform" aria-hidden="true"></i> 메인
         </button>
+        <!-- 제목 -->
         <div class="pt-4 inline-block relative">
             <span class="block text-xs font-bold text-indigo-500 tracking-widest uppercase mb-1 animate-fade-in-up">AI Service</span>
             <h2 class="relative z-10 text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-700 via-indigo-600 to-slate-700 tracking-tight pb-1">
@@ -39,6 +43,7 @@
         </div>
     </header>
 
+    <!-- 진행 단계 -->
     <div class="flex justify-between items-center mb-12 relative px-8 select-none">
         <div class="absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-slate-100 via-sky-300 to-slate-100 -z-10 rounded-full"></div>
         <div class="step-item active" id="step-1">
@@ -55,32 +60,41 @@
         </div>
     </div>
 
+    <!-- 입력 단계 -->
     <div id="step-1-content" class="step-content">
+        <!-- 입력 모드 변경 버튼 -->
         <div class="flex p-1 bg-slate-100/80 backdrop-blur-sm rounded-xl mb-6 relative z-10">
             <button id="btn-mode-file" class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm bg-white text-indigo-600">파일 업로드</button>
             <button id="btn-mode-cam" class="flex-1 py-2 rounded-lg text-sm font-medium text-slate-500 hover:text-slate-700">웹캠 녹화</button>
         </div>
 
+        <!-- 파일 업로드 모드 영역 -->
         <div id="mode-file-area">
+            <!-- 드래그 앤 드랍 영역 -->
             <div id="drop-area" class="border-2 border-dashed border-indigo-200/70 bg-indigo-50/30 rounded-2xl p-10 text-center cursor-pointer hover:bg-indigo-50/70 hover:border-indigo-300 transition-all group backdrop-blur-sm">
                 <i class="fa-solid fa-cloud-arrow-up text-4xl text-indigo-300 group-hover:text-indigo-500 mb-4 transition-colors"></i>
                 <p class="text-slate-600 font-medium">동영상을 드래그하거나 클릭하세요</p>
                 <input type="file" id="video-file-input" accept="video/*" hidden>
             </div>
 
+            <!-- 파일 상태 상자 -->
             <div id="file-status-box" class="hidden mt-4 p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex justify-between items-center animate-slide-up shadow-sm">
+                <!-- 파일 아이템 -->
                 <div class="flex items-center gap-3 overflow-hidden">
+                    <!-- 아이콘 -->
                     <div class="w-9 h-9 rounded-full bg-emerald-100/80 flex items-center justify-center flex-shrink-0 backdrop-blur-sm">
                         <i class="fa-solid fa-file-video text-emerald-600"></i>
                     </div>
                     <span class="status-text text-emerald-800 font-medium truncate max-w-[180px]">파일명.mp4</span>
                 </div>
+                <!-- 파일 업로드 버튼 -->
                 <button id="upload-start-btn" class="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-200/50 transition-all active:scale-95 whitespace-nowrap hover:-translate-y-0.5">
                     번역 시작 <i class="fa-solid fa-arrow-right ml-1"></i>
                 </button>
             </div>
         </div>
 
+        <!-- 캠 모드 영역 -->
         <div id="mode-cam-area" class="hidden text-center">
             <div class="relative w-full aspect-video bg-slate-800 rounded-2xl overflow-hidden mb-5 ring-4 ring-slate-100/50 shadow-lg">
                 <video id="cam-preview" class="hidden w-full h-full object-cover transform scale-x-[-1]" autoplay muted playsinline></video>
@@ -95,6 +109,7 @@
 
             <p id="cam-status-text" class="text-sm text-slate-500 mb-6 font-medium min-h-[1.25rem]"></p>
 
+            <!-- 녹화 관련 버튼(시작, 중지) -->
             <div class="flex justify-center gap-4">
                 <button id="btn-start-record" class="btn-primary bg-indigo-600 text-white hover:bg-indigo-700 px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-200/50 hover:-translate-y-1">녹화 시작</button>
                 <button id="btn-stop-record" class="btn-danger bg-red-500 text-white hover:bg-red-600 px-8 py-3 rounded-xl font-bold hidden transition-all shadow-lg shadow-red-200/50 hover:-translate-y-1 animate-pulse">녹화 중지</button>
@@ -102,29 +117,36 @@
         </div>
     </div>
 
+    <!-- 번역 2단계 분석 -->
     <div id="step-2-content" class="step-content hidden text-center py-12">
         <div class="mb-10 relative inline-block">
-             <div class="absolute inset-0 bg-indigo-200 rounded-full blur-2xl opacity-30 animate-pulse"></div>
+            <div class="absolute inset-0 bg-indigo-200 rounded-full blur-2xl opacity-30 animate-pulse"></div>
             <div class="w-24 h-24 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce shadow-xl ring-4 ring-white relative z-10">
                 <i class="fa-solid fa-wand-magic-sparkles text-4xl text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600"></i>
             </div>
             <h3 class="text-2xl font-bold text-slate-800">AI 분석 중...</h3>
+            <!-- 진행 메시지 -->
             <p id="progress-message" class="text-slate-500 text-sm mt-2 font-medium">잠시만 기다려주세요</p>
         </div>
 
+        <!-- 진행바 영역 -->
         <div class="w-full bg-slate-100/80 backdrop-blur-sm rounded-full h-4 overflow-hidden shadow-inner relative max-w-sm mx-auto ring-1 ring-slate-200/50">
+            <!-- 진행바 -->
             <div id="progress-bar" class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-300 relative overflow-hidden" style="width: 0%">
                  <div class="absolute inset-0 bg-white/30 animate-shimmer" style="transform: skewX(-20deg);"></div>
             </div>
         </div>
     </div>
 
-    <div id="step-3-content" class="step-content hidden">
+    <!-- 번역 3단계 결과 -->
+    <div id="step-3-content" class="step-content hidden **max-h-full overflow-y-auto p-1**">
+        <!-- 결과 단어 -->
         <div class="text-center mb-8">
             <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm mb-3 inline-block">Translation Result</span>
             <h3 id="result-word" class="text-4xl md:text-5xl font-black text-slate-800 mt-3 break-keep tracking-tight drop-shadow-sm"></h3>
         </div>
 
+        <!-- 결과 영상 -->
         <div class="relative w-full aspect-video bg-black rounded-2xl overflow-hidden mb-6 shadow-2xl ring-4 ring-white/80 backdrop-blur-sm group">
             <video id="result-video-player" controls loop muted playsinline class="hidden w-full h-full object-contain"></video>
             <div id="result-video-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-white/80 bg-slate-900/40 backdrop-blur-sm">
@@ -133,24 +155,34 @@
             </div>
         </div>
 
-        <div class="flex justify-between items-center bg-slate-50/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-100/80 mb-8 shadow-sm">
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-xl bg-indigo-100/80 flex items-center justify-center text-indigo-600 shadow-sm">
-                    <i class="fa-solid fa-draw-polygon text-lg"></i>
+        <div class="flex gap-4 mb-4 mb-8">
+            <div class="flex-grow-[3] flex justify-between items-center bg-slate-50/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-100/80 shadow-sm">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-100/80 flex items-center justify-center text-indigo-600 shadow-sm">
+                        <i class="fa-solid fa-draw-polygon text-lg"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-700">키포인트 시각화</h4>
+                        <p class="text-xs text-slate-500">AI가 분석한 관절 위치를 표시합니다.</p>
+                    </div>
                 </div>
-                <div>
-                     <h4 class="font-bold text-slate-700">키포인트 시각화</h4>
-                     <p class="text-xs text-slate-500">AI가 분석한 관절 위치를 표시합니다.</p>
-                </div>
+                <label class="toggle-switch cursor-pointer scale-110">
+                    <input type="checkbox" id="keypoint-toggle" class="sr-only peer">
+                    <div class="w-11 h-6 bg-slate-200/80 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-indigo-500 peer-checked:to-indigo-600 shadow-inner"></div>
+                </label>
             </div>
-            <label class="toggle-switch cursor-pointer scale-110">
-                <input type="checkbox" id="keypoint-toggle" class="sr-only peer">
-                <div class="w-11 h-6 bg-slate-200/80 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-indigo-500 peer-checked:to-indigo-600 shadow-inner"></div>
-            </label>
-        </div>
 
-        <button onclick="goHome()" class="w-full py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 hover:text-slate-800 hover:border-slate-300 transition-all shadow-sm hover:shadow-md active:scale-[0.98]">
-            처음으로 돌아가기
-        </button>
+            <!-- 1단계로 -->
+            <button id="go_translation" class="flex-grow-[2] self-stretch flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 hover:text-slate-800 hover:border-slate-300 transition-all shadow-sm hover:shadow-md active:scale-[0.98]">
+                다른 단어 검색
+            </button>
+        </div>
     </div>
 </section>
+
+<!-- translation.js 모듈을 가져와서 initTranslation 함수를 호출합니다. -->
+<script type="module">
+    import { initTranslation, stopWebcamStream } from '{{ url_for("static", filename="js/translation.js") }}';
+    initTranslation();
+    window.stopWebcamStream = stopWebcamStream;
+</script>

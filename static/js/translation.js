@@ -1,5 +1,5 @@
 import { state, elements } from './state.js';
-import { showToast, showError, setStep, fetchAPI } from './utils.js';
+import { showToast, showError, setStep, fetchAPI, navigateTo } from './utils.js';
 
 export function initTranslation() {
     // 1. Mode Toggles
@@ -20,6 +20,9 @@ export function initTranslation() {
 
     // 4. Keypoint Toggle
     elements.keypointToggle?.addEventListener('change', handleKeypointToggle);
+
+    // 5/ go translation
+    elements.go_translation?.addEventListener('click', () => navigateTo('translation'));
 }
 
 function setupDragAndDrop() {
@@ -61,17 +64,29 @@ function updateModeButtonStyles(isFile) {
     setStyle(elements.btnModeCam, !isFile);
 }
 
+// 파일 업로드 관련 함수
+
+// --- 파일 입력 시 처리하는 함수 ---
 function handleFileSelect(file) {
-    if (!file) return;
-    if (!file.type.startsWith('video/')) return showError('동영상 파일만 가능합니다.');
+    if (!file) return;                                                                // 파일의 존재 확인
+    if (!file.type.startsWith('video/')) return showError('동영상 파일만 가능합니다.'); // 입력된 파일이 비디오 타입인지 확인
 
     state.uploadedFile = { file: file, filename: file.name };
+    // 상태 텍스트를 파일 이름으로
     if (elements.statusText) elements.statusText.textContent = file.name;
+    // 파일 입력 시 파일 상태 박스 보이기
     if (elements.fileStatusBox) elements.fileStatusBox.classList.remove('hidden');
+    // 파일 입력 시 업로드 시작 버튼 초기화
+    if (elements.uploadStartButton) {
+        elements.uploadStartButton.textContent = '번역하기';
+        elements.uploadStartButton.disabled = false; // 업로드 시작 버튼을 활성화
+    }
     showToast(`파일 선택됨: ${file.name}`);
 }
 
-// --- Webcam Logic ---
+// 녹화 관련 함수
+
+// --- 웹캠 스트리밍 시작 함수 ---
 function startWebcamStream() {
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         .then(stream => {
@@ -88,6 +103,7 @@ function startWebcamStream() {
         });
 }
 
+// --- 웹캠 스트리밍 중지 ---
 export function stopWebcamStream() {
     if (state.webcamStream) {
         state.webcamStream.getTracks().forEach(t => t.stop());
@@ -95,6 +111,9 @@ export function stopWebcamStream() {
     }
 }
 
+window.stopWebcamStream = stopWebcamStream;
+
+// --- 녹화 시작 함수 ---
 function startRecording() {
     if (!state.webcamStream) return;
     state.recordedChunks = [];
@@ -118,6 +137,7 @@ function startRecording() {
     elements.camStatusText.textContent = '녹화 중...';
 }
 
+// --- 녹화 중지 함수 ---
 function stopRecording() {
     if (state.mediaRecorder?.state === 'recording') state.mediaRecorder.stop();
     elements.btnStartRecord.classList.remove('hidden');
@@ -125,63 +145,73 @@ function stopRecording() {
     elements.recIndicator.classList.add('hidden');
 }
 
-// --- Server & Result ---
+// 번역 작업 2단계
+
+// --- 서버에 영상을 업로드 하는 함수 ---
 async function uploadVideoToServer() {
     if (!state.uploadedFile || !state.uploadedFile.file) return showError('파일이 없습니다.');
 
-    setStep(2);
-    elements.uploadStartButton.disabled = true;
+    setStep(2); // 번역 작업을 2단계로
+
+    elements.uploadStartButton.disabled = true; // 업로드 시작 버튼을 비활성와
 
     const formData = new FormData();
     formData.append('file', state.uploadedFile.file);
 
     try {
-        // Upload
+        // 업로드 Route
         const uploadData = await fetchAPI('/api/upload', { method: 'POST', body: formData });
         state.uploadedFile.fileId = uploadData.file_id;
 
-        // Request Translation
+        // 번역 요청 Route
         const transData = await fetchAPI('/api/translate', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ file_id: uploadData.file_id })
         });
 
-        monitorProgress(transData.task_id);
+        monitorProgress(transData.task_id); // 작업 과정 모니터링 함수 호출
 
     } catch (e) {
-        handleProcessError(e.message);
+        handleProcessError(e.message); // 작업 과정 중 오류 발생 시 호출하는 함수
     }
 }
 
+// --- 작업과정 모니터링 함수 ---
 function monitorProgress(taskId) {
     if (state.eventSource) state.eventSource.close();
-    state.eventSource = new EventSource(`/api/translate/progress/${taskId}`);
+    state.eventSource = new EventSource(`/api/translate/progress/${taskId}`); // 모니터링 Route
 
+    // 작업 중
     state.eventSource.addEventListener('progress', e => {
         const d = JSON.parse(e.data);
         if (elements.progressBar) elements.progressBar.style.width = `${d.progress}%`;
         if (elements.progressMessage) elements.progressMessage.textContent = `${d.progress}% - ${d.message}`;
     });
 
+    // 작업 완료
     state.eventSource.addEventListener('complete', e => {
         state.eventSource.close();
         const d = JSON.parse(e.data);
-        handleCompletion(taskId, d.word);
+        handleCompletion(taskId, d.word); // 작업 완료되었으니 다음 함수 호출
     });
 
+    // 작업 오류
     state.eventSource.addEventListener('error', () => {
         state.eventSource.close();
-        handleProcessError('서버 연결 중단');
+        handleProcessError('서버 연결 중단');  // 작업 과정 중 오류 발생 시 호출하는 함수
     });
 }
 
+// 번역 작업 3단계
+
+// 번역 작업이 완료 시 작업하는 함수
 function handleCompletion(taskId, word) {
     if (elements.progressBar) elements.progressBar.style.width = '100%';
     if (elements.resultWord) elements.resultWord.textContent = word;
 
-    const annotatedUrl = `/api/video/annotated/${taskId}`;
-    const originalUrl = `/api/video/original/${taskId}`;
+    const annotatedUrl = `/api/video/annotated/${taskId}`; // 작업된 영상 위치
+    const originalUrl = `/api/video/original/${taskId}`; // 원본 영상 위치
 
     const player = elements.resultVideoPlayer;
     player.dataset.annotatedUrl = annotatedUrl;
@@ -197,13 +227,16 @@ function handleCompletion(taskId, word) {
         word: word
     });
 
-    setStep(3);
+    setStep(3); // 번역 작업을 3단계로
+
     player.classList.remove('hidden');
     if (elements.resultVideoPlaceholder) elements.resultVideoPlaceholder.classList.add('hidden');
     player.play().catch(() => {});
 
-    elements.uploadStartButton.disabled = false;
-    elements.uploadStartButton.textContent = '다시 번역하기';
+    if (elements.uploadStartButton) {
+        elements.uploadStartButton.disabled = false; // 업로드 시작 버튼 활성화
+        elements.uploadStartButton.textContent = '다시 번역하기'; // 이미 작업해본 파일이 그대로 있으니 텍스트를 '다시 번역하기'로 변경
+    }
 }
 
 function handleKeypointToggle(e) {
@@ -218,8 +251,12 @@ function handleKeypointToggle(e) {
     if (wasPlaying) player.play();
 }
 
+// 작업 오류러 중단하는 함수
 function handleProcessError(msg) {
-    showError(msg);
-    setStep(1);
-    elements.uploadStartButton.disabled = false;
+
+    showError(msg); // 에러 메시지
+
+    setStep(1); // 1단계로 초기화
+
+    elements.uploadStartButton.disabled = false; // 업로드 시작 버튼 활성화
 }

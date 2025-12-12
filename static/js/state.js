@@ -39,10 +39,46 @@ export const elements = {
     sidebarOverlay: document.getElementById('sidebar-overlay'),
     sidebarList: document.getElementById('sidebar-list'),
 
+    // --- 메인 이동 카드 ---
+    cardTranslate: document.getElementById('card-translate'),   // 번역 카드
+    cardDictionary: document.getElementById('card-dictionary'), // 사전 카드
+    cardGame: document.getElementById('card-game'),             // 게임 카드
 
+    // --- 번역 1단계 모드 변경 ---
+    btnModeFile: document.getElementById('btn-mode-file'),          // 모드 변경 버튼(파일)
+    btnModeCam: document.getElementById('btn-mode-cam'),            // 모드 변경 버튼(캠)
 
+    // --- 파일 업로드 ---
+    modeFileArea: document.getElementById('mode-file-area'),        // 파일 업로드 모드 영역
+    dropArea: document.getElementById('drop-area'),                 // 드랍 영역
+    fileInput: document.getElementById('video-file-input'),         // 파일 입력
+    fileStatusBox: document.getElementById('file-status-box'),      // 현재 파일 상태
+    statusText: document.querySelector('.status-text'),             // 현재 파일 상태 텍스트
+
+    uploadStartButton: document.getElementById('upload-start-btn'), // 파일 업로드 버튼
+
+    // --- 카메라 ---
+    modeCamArea: document.getElementById('mode-cam-area'),          // 캠 모드 영역
+    videoPreview: document.getElementById('cam-preview'),           // 캠 보여주기 영역
+    camPlaceholder: document.getElementById('cam-placeholder'),     // 
     recIndicator: document.getElementById('recording-indicator'),
+    camStatusText: document.getElementById('cam-status-text'),      // 캠 상태 텍스트
+    
+    btnStartRecord: document.getElementById('btn-start-record'),    // 녹화 시작 버튼
+    btnStopRecord: document.getElementById('btn-stop-record'),      // 녹화 중지 버튼
 
+    // --- 번역 2단계 분석 단계 ---
+    progressMessage: document.getElementById('progress-message'),   // 진행 메시지: 진행 상황을 알려주기 위한 메시지
+    progressBar: document.getElementById('progress-bar'),           // 진행바
+
+    // --- 번역 3단계 결과 단계 ---
+    resultWord: document.getElementById('result-word'),                             // 번역 결과 단어
+    resultVideoPlayer: document.getElementById('result-video-player'),              // 결과 비디오
+    resultVideoPlaceholder: document.getElementById('result-video-placeholder'),    // 결과 비디오 영역
+    keypointToggle: document.getElementById('keypoint-toggle'),                     // 키포인트 토글 스위치
+    go_translation: document.getElementById('go_translation'),                      // 메인화면으로 가는 버튼
+
+    // --- 사전 모듈 ---
     dictSearchInput: document.getElementById('dict-search-input'),
     dictSearchBtn: document.getElementById('dict-search-btn'),
     dictResultList: document.getElementById('dict-result-list'),
