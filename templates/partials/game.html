@@ -1,11 +1,14 @@
 <section id="game-app" class="glass-container max-w-2xl w-full hidden fade-in relative text-center mx-auto" aria-label="수어 퀴즈 게임">
 
+    <!-- 헤더 -->
     <header class="flex items-center justify-between mb-8 px-2 relative z-10">
+        <!-- 메인 화면으로 -->
         <button onclick="goHome()" class="text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-2 py-2 group">
             <i class="fa-solid fa-chevron-left group-hover:-translate-x-1 transition-transform"></i>
             <span class="font-medium">나가기</span>
         </button>
 
+        <!-- 제목 -->
         <div id="game-header-status" class="hidden flex items-center gap-3">
             <span id="game-level-badge" class="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-xs font-bold tracking-wide border border-orange-200 shadow-sm">
                 LEVEL 1
@@ -173,3 +176,18 @@
         </div>
     </div>
 </section>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/modules/game.css') }}">
+
+<script type="module">
+    import { initGame, loadNextQuestion } from '{{ url_for("static", filename="js/game.js") }}';
+    
+    // 1. 페이지 로드 시 이벤트 리스너 설정 및 초기 상태 리셋 (initGame은 이제 navigation을 하지 않습니다.)
+    initGame(); 
+
+    // 2. main.js의 카드 클릭 이벤트가 호출할 수 있도록 전역에 노출 (Issue 2 해결)
+    window.initGame = initGame;
+    
+    // 3. 기존의 전역 함수 노출도 유지
+    window.loadNextQuestion = loadNextQuestion;
+</script>

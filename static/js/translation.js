@@ -25,6 +25,7 @@ export function initTranslation() {
     elements.go_translation?.addEventListener('click', () => navigateTo('translation'));
 }
 
+// 파일 업로드 모드 드랙그 앤 드랍
 function setupDragAndDrop() {
     const area = elements.dropArea;
     ['dragenter', 'dragover'].forEach(evt => {
@@ -39,7 +40,7 @@ function setupDragAndDrop() {
             area.classList.remove('border-indigo-400', 'bg-indigo-50');
         });
     });
-    area.addEventListener('drop', e => handleFileSelect(e.dataTransfer.files[0]));
+    area.addEventListener('drop', e => handleFileSelect(e.dataTransfer.files[0])); // 입력된 파일 처리 함수
 }
 
 function toggleInputMode(mode) {
@@ -127,7 +128,7 @@ function startRecording() {
         const blob = new Blob(state.recordedChunks, { type: 'video/mp4' });
         const file = new File([blob], `cam_${Date.now()}.mp4`, { type: 'video/mp4' });
         toggleInputMode('file');
-        handleFileSelect(file);
+        handleFileSelect(file); // 입력된 파일 처리 함수
     };
 
     state.mediaRecorder.start();

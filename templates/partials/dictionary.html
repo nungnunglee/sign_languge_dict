@@ -1,11 +1,15 @@
 <section id="dictionary-app" class="glass-container max-w-2xl w-full hidden fade-in relative min-h-[500px]" aria-label="수어 사전">
 
+    <!-- 헤더 -->
     <header class="relative mb-10 text-center pt-2">
+        <!-- 메인 화면으로 -->
         <button onclick="goHome()" class="absolute top-0 left-0 text-slate-400 hover:text-emerald-600 transition-colors py-2 group" aria-label="메인으로">
             <i class="fa-solid fa-arrow-left mr-1 group-hover:-translate-x-1 transition-transform" aria-hidden="true"></i> 메인
         </button>
 
+        <!-- 제목 -->
         <div class="pt-4 inline-block relative">
+            <!-- 현재 페이지 -->
             <span class="block text-xs font-bold text-emerald-500 tracking-widest uppercase mb-1 animate-fade-in-up">Search</span>
             <h2 class="relative z-10 text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-700 via-emerald-600 to-slate-700 tracking-tight pb-1">
                 수어 사전
@@ -40,3 +44,12 @@
     <div id="dict-result-list" class="flex flex-col gap-2 max-h-[350px] overflow-y-auto custom-scrollbar p-1">
         </div>
 </section>
+
+<!-- css 가져오기 -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/modules/dictionary.css') }}">
+
+<!-- dictionary.js 모듈을 가져와서 initDictionary 함수를 호출합니다. -->
+<script type="module">
+    import { initDictionary } from '{{ url_for("static", filename="js/dictionary.js") }}';
+    initDictionary();
+</script>
