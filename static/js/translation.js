@@ -421,6 +421,10 @@ function handleCompletion(taskId, word) {
     player.dataset.originalUrl = originalUrl;
     player.src = originalUrl;
 
+    if (elements.keypointToggle) {
+        elements.keypointToggle.checked = false;
+    }
+
     // Save History
     state.fileHistory.unshift({
         type: 'translation',
