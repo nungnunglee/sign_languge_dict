@@ -60,12 +60,16 @@ export const elements = {
     // --- 카메라 ---
     modeCamArea: document.getElementById('mode-cam-area'),          // 캠 모드 영역
     videoPreview: document.getElementById('cam-preview'),           // 캠 보여주기 영역
+    recordedVideoPlayer: document.getElementById('recorded-video-player'),
     camPlaceholder: document.getElementById('cam-placeholder'),     // 
     recIndicator: document.getElementById('recording-indicator'),
     camStatusText: document.getElementById('cam-status-text'),      // 캠 상태 텍스트
     
     btnStartRecord: document.getElementById('btn-start-record'),    // 녹화 시작 버튼
     btnStopRecord: document.getElementById('btn-stop-record'),      // 녹화 중지 버튼
+
+    recordToggleBtn: document.getElementById('record-toggle-btn'),  // 녹화/중지 버튼
+    translateBtn: document.getElementById('translate-btn'),         // 웹캠 영상 번역
 
     // --- 번역 2단계 분석 단계 ---
     progressMessage: document.getElementById('progress-message'),   // 진행 메시지: 진행 상황을 알려주기 위한 메시지

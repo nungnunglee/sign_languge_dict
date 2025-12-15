@@ -97,7 +97,11 @@
         <!-- 캠 모드 영역 -->
         <div id="mode-cam-area" class="hidden text-center">
             <div class="relative w-full aspect-video bg-slate-800 rounded-2xl overflow-hidden mb-5 ring-4 ring-slate-100/50 shadow-lg">
-                <video id="cam-preview" class="hidden w-full h-full object-cover transform scale-x-[-1]" autoplay muted playsinline></video>
+                <div id="cam-preview-container">
+                    <video id="cam-preview" class="hidden w-full h-full object-cover transform scale-x-[-1]" autoplay muted playsinline></video>
+                    <video id="recorded-video-player" controls class="w-full h-full object-cover rounded-xl hidden absolute top-0 left-0"></video>
+                </div>
+                
                 <div id="cam-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400/80 bg-slate-900/50 backdrop-blur-sm">
                     <i class="fa-solid fa-camera-slash text-4xl mb-3 opacity-70"></i>
                     <span>카메라 권한이 필요합니다</span>
@@ -111,8 +115,23 @@
 
             <!-- 녹화 관련 버튼(시작, 중지) -->
             <div class="flex justify-center gap-4">
-                <button id="btn-start-record" class="btn-primary bg-indigo-600 text-white hover:bg-indigo-700 px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-200/50 hover:-translate-y-1">녹화 시작</button>
-                <button id="btn-stop-record" class="btn-danger bg-red-500 text-white hover:bg-red-600 px-8 py-3 rounded-xl font-bold hidden transition-all shadow-lg shadow-red-200/50 hover:-translate-y-1 animate-pulse">녹화 중지</button>
+                <!-- <button id="btn-start-record" class="btn-primary bg-indigo-600 text-white hover:bg-indigo-700 px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-200/50 hover:-translate-y-1">녹화 시작</button>
+                <button id="btn-stop-record" class="btn-danger bg-red-500 text-white hover:bg-red-600 px-8 py-3 rounded-xl font-bold hidden transition-all shadow-lg shadow-red-200/50 hover:-translate-y-1 animate-pulse">녹화 중지</button> -->
+                <button id="record-toggle-btn" 
+                        class="flex-1 py-3 px-4 rounded-xl 
+                            bg-indigo-500 text-white font-bold 
+                            hover:bg-indigo-600 transition-all 
+                            shadow-lg shadow-indigo-500/30 active:scale-[0.98]">
+                    <i class="fas fa-video mr-2"></i> 녹화 시작
+                </button>
+    
+                <button id="translate-btn" 
+                        class="flex-1 py-3 px-4 rounded-xl 
+                            bg-slate-300 text-slate-500 font-bold cursor-not-allowed 
+                            transition-all shadow-md active:scale-100" 
+                        disabled>
+                    <i class="fas fa-brain mr-2"></i> 영상 번역
+                </button>
             </div>
         </div>
     </div>
