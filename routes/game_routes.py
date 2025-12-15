@@ -84,6 +84,7 @@ def get_multichoice_quiz() -> Response:
             'options': [
                 {
                     'id': opt['id'],
+                    'word': opt['word'],
                     'video_url': f'/api/video/dictionary/{opt["id"]}'
                 } for opt in options
             ]

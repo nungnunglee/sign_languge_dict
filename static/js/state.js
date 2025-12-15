@@ -15,15 +15,18 @@ export const state = {
 
     // --- Game State ---
     game: {
+        pendingMode: null,
         mode: null, // 'practice' (AI) | 'multichoice' (4지선다)
         currentWord: null,
         currentQuizId: null,
+        currentOptions: [],
         hintUrl: null,
         stream: null,
         mediaRecorder: null,
         chunks: [],
         totalScore: 0,
-        level: 1
+        level: 1,
+        maxQuestions: 5
     }
 };
 
@@ -90,6 +93,7 @@ export const elements = {
     // --- Game Module ---
     // Screens
     gameMenuScreen: document.getElementById('game-menu-screen'),
+    gameSettingScreen: document.getElementById('game-setting-screen'),
     gameMultiChoiceScreen: document.getElementById('game-multichoice-screen'),
     screenQuiz: document.getElementById('game-quiz-screen'),
     screenLoading: document.getElementById('game-loading-screen'),

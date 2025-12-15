@@ -211,13 +211,15 @@ function handleCompletion(taskId, word) {
     if (elements.progressBar) elements.progressBar.style.width = '100%';
     if (elements.resultWord) elements.resultWord.textContent = word;
 
-    const annotatedUrl = `/api/video/annotated/${taskId}`; // 작업된 영상 위치
-    const originalUrl = `/api/video/original/${taskId}`; // 원본 영상 위치
+    const annotatedUrl = `/api/video/annotated/${taskId}`;
+    const originalUrl = `/api/video/original/${taskId}`;
 
     const player = elements.resultVideoPlayer;
     player.dataset.annotatedUrl = annotatedUrl;
     player.dataset.originalUrl = originalUrl;
-    player.src = annotatedUrl;
+
+    const useAnnotated = elements.keypointToggle.checked;
+    player.src = useAnnotated ? annotatedUrl : originalUrl;
 
     // Save History
     state.fileHistory.unshift({
@@ -228,15 +230,18 @@ function handleCompletion(taskId, word) {
         word: word
     });
 
-    setStep(3); // 번역 작업을 3단계로
+    setStep(3);
 
     player.classList.remove('hidden');
     if (elements.resultVideoPlaceholder) elements.resultVideoPlaceholder.classList.add('hidden');
+
+    // 비디오 로드 후 재생 (Promise 에러 방지)
+    player.load();
     player.play().catch(() => {});
 
     if (elements.uploadStartButton) {
-        elements.uploadStartButton.disabled = false; // 업로드 시작 버튼 활성화
-        elements.uploadStartButton.textContent = '다시 번역하기'; // 이미 작업해본 파일이 그대로 있으니 텍스트를 '다시 번역하기'로 변경
+        elements.uploadStartButton.disabled = false;
+        elements.uploadStartButton.textContent = '다시 번역하기';
     }
 }
 

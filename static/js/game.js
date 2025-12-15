@@ -26,20 +26,41 @@ export function initGame() {
     state.game.totalScore = 0;
     state.game.level = 1;
 
+    document.getElementById('game-header-status').classList.add('hidden');
+
     updateTotalScoreUI();
     updateLevelUI();
     toggleScreen('menu');
 }
 
 // Global Exports for HTML Interaction
-window.startGameMode = (mode) => {
-    state.game.mode = mode; // 'practice' | 'multichoice'
-    if (mode === 'practice') {
+window.selectGameMode = (mode) => {
+    state.game.pendingMode = mode;
+    toggleScreen('setting');
+};
+
+
+window.startGameWithCount = (count) => {
+    state.game.maxQuestions = count;
+    state.game.mode = state.game.pendingMode; // 임시 저장된 모드 확정
+
+
+    document.getElementById('game-header-status').classList.remove('hidden');
+    updateLevelUI();
+
+
+    if (state.game.mode === 'practice') {
         startGameWebcam();
         loadNextQuestion();
-    } else if (mode === 'multichoice') {
+    } else if (state.game.mode === 'multichoice') {
         loadNextQuestion();
     }
+};
+
+window.startCustomGame = () => {
+    const slider = document.getElementById('custom-question-slider');
+    const count = parseInt(slider.value) || 5;
+    startGameWithCount(count);
 };
 
 // === 2. Quiz Logic ===
@@ -70,6 +91,7 @@ function setupMultiChoiceQuiz(quiz) {
     const { target_word, target_id, options } = quiz;
     state.game.currentWord = target_word;
     state.game.currentQuizId = target_id;
+    state.game.currentOptions = options;
 
     elements.multiTargetWord.textContent = target_word;
     elements.multiOptionsContainer.innerHTML = '';
@@ -112,9 +134,16 @@ function setupPracticeQuiz(quiz) {
 
 function checkMultiChoiceAnswer(selectedId) {
     const isCorrect = selectedId === state.game.currentQuizId;
+
+    let wrongWord = "알 수 없음";
+    if (!isCorrect) {
+        const selectedOption = state.game.currentOptions.find(opt => opt.id === selectedId);
+        if (selectedOption) wrongWord = selectedOption.word;
+    }
+
     showGameResult({
         success: isCorrect,
-        recognized_word: isCorrect ? state.game.currentWord : "오답",
+        recognized_word: isCorrect ? state.game.currentWord : wrongWord,
         isMultiChoice: true
     });
 }
@@ -269,6 +298,16 @@ function showGameResult(result) {
     toggleScreen('result');
     const { success, recognized_word, isMultiChoice } = result;
 
+
+    const answerBtn = document.getElementById('btn-view-answer');
+
+    if (!success) {
+        answerBtn.classList.remove('hidden');
+        answerBtn.onclick = () => showCorrectAnswerVideo();
+    } else {
+        answerBtn.classList.add('hidden');
+    }
+
     // Update Result UI
     if (success) {
         setResultCardStyle(true, '성공!', 'text-emerald-600', 'border-emerald-400', 'bg-emerald-50');
@@ -283,12 +322,34 @@ function showGameResult(result) {
     } else {
         setResultCardStyle(false, '아쉬워요', 'text-orange-600', 'border-orange-400', 'bg-orange-50');
         elements.scoreValue.innerHTML = '<i class="fa-regular fa-face-frown text-5xl"></i>';
-        elements.resultDesc.innerHTML = isMultiChoice
-            ? `선택하신 영상은 <b>"${state.game.currentWord}"</b>이 아닙니다.`
-            : `AI가 <b>"${recognized_word}"</b>(으)로 인식했습니다.<br>정답은 "${state.game.currentWord}" 입니다.`;
+
+
+        if (isMultiChoice) {
+            elements.resultDesc.innerHTML = `선택하신 영상은 <b>"${recognized_word}"</b>입니다.<br>정답은 <b>"${state.game.currentWord}"</b>입니다.`;
+        } else {
+            // 연습 모드
+             elements.resultDesc.innerHTML = `AI가 <b>"${recognized_word}"</b>(으)로 인식했습니다.<br>정답은 <b>"${state.game.currentWord}"</b>입니다.`;
+        }
     }
 
     setupNextButton();
+}
+
+function showCorrectAnswerVideo() {
+    let videoUrl = "";
+
+    if (state.game.mode === 'practice') {
+        videoUrl = state.game.hintUrl;
+    } else {
+
+        videoUrl = `/api/video/dictionary/${state.game.currentQuizId}`;
+    }
+
+    if (videoUrl) {
+        openVideoPreview(videoUrl);
+    } else {
+        showToast("정답 영상을 불러올 수 없습니다.", "error");
+    }
 }
 
 function setResultCardStyle(success, title, titleColor, borderColor, bgColor) {
@@ -299,7 +360,7 @@ function setResultCardStyle(success, title, titleColor, borderColor, bgColor) {
 
 function setupNextButton() {
     const nextBtn = document.getElementById('btn-next-question');
-    const isFinal = state.game.level >= CONFIG.LIMITS.MAX_LEVEL;
+    const isFinal = state.game.level >= state.game.maxQuestions;
 
     nextBtn.textContent = isFinal ? "최종 결과 보기" : "다음 문제";
     nextBtn.onclick = isFinal ? showFinalResult : () => {
@@ -311,9 +372,11 @@ function setupNextButton() {
 function showFinalResult() {
     toggleScreen('final');
     document.getElementById('game-final-score-value').textContent = state.game.totalScore;
-    document.getElementById('game-final-score-text').textContent = Math.floor(state.game.totalScore / 10);
 
-    // Stop Webcam
+    const correctCount = state.game.totalScore / 10;
+    document.getElementById('game-final-score-text').innerHTML =
+        `<span class="text-indigo-600">${correctCount}</span> / ${state.game.maxQuestions}`;
+
     if (state.game.stream) {
         state.game.stream.getTracks().forEach(track => track.stop());
         state.game.stream = null;
@@ -324,12 +387,13 @@ function showFinalResult() {
 
 function toggleScreen(screenName) {
     [
-        elements.gameMenuScreen, elements.gameMultiChoiceScreen, elements.screenQuiz,
+        elements.gameMenuScreen,elements.gameSettingScreen, elements.gameMultiChoiceScreen, elements.screenQuiz,
         elements.screenLoading, elements.screenResult, elements.screenFinal
     ].forEach(el => el?.classList.add('hidden'));
 
     const target = {
         menu: elements.gameMenuScreen,
+        setting: elements.gameSettingScreen,
         multichoice: elements.gameMultiChoiceScreen,
         quiz: elements.screenQuiz,
         loading: elements.screenLoading,
@@ -367,7 +431,7 @@ function updateRecordButtonUI(isRecording) {
 }
 
 function updateTotalScoreUI() { elements.gameTotalScore.textContent = state.game.totalScore; }
-function updateLevelUI() { elements.gameLevelBadge.textContent = `LEVEL ${state.game.level}`; }
+function updateLevelUI() {elements.gameLevelBadge.textContent = `${state.game.level} / ${state.game.maxQuestions}`;}
 function updateProgressBar(pct, msg) {
     elements.gameProgressBar.style.width = `${pct}%`;
     elements.gameProgressMsg.textContent = msg;
@@ -453,6 +517,7 @@ function openVideoPreview(url) {
     }
 }
 
+window.toggleScreen = toggleScreen;
 window.toggleGameRecording = toggleRecording;
 window.cancelUpload = resetUploadState;
 window.confirmUpload = submitGameFile;
