@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 game_bp = Blueprint('game', __name__)
 
 
-
 def _run_game_evaluation_task(file_id: str, task_data: Dict[str, Any], target_word: str) -> None:
     """
     [Background Task] 사용자 영상 채점 및 결과 업데이트
