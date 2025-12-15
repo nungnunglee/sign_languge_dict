@@ -43,6 +43,7 @@ function setupDragAndDrop() {
     area.addEventListener('drop', e => handleFileSelect(e.dataTransfer.files[0])); // 입력된 파일 처리 함수
 }
 
+// 파일 입력 모드 변경
 function toggleInputMode(mode) {
     state.inputType = mode;
     const isFile = mode === 'file';
@@ -217,7 +218,7 @@ function handleCompletion(taskId, word) {
     const player = elements.resultVideoPlayer;
     player.dataset.annotatedUrl = annotatedUrl;
     player.dataset.originalUrl = originalUrl;
-    player.src = annotatedUrl;
+    player.src = originalUrl;
 
     // Save History
     state.fileHistory.unshift({
