@@ -221,7 +221,6 @@ function startRecording() {
 
         // 4. 버튼 상태 변경
         setRecordedState(); // 녹화된 상태로
-        showToast('📼 녹화 완료했습니다, 영상을 확인해 주세요.', 'success');
     };
 
     try {
@@ -232,8 +231,6 @@ function startRecording() {
         elements.camStatusText.textContent = '녹화 중...'; // 캠 상태 설명
         
         setRecordingState(); // 녹화 중 상태로
-        
-        showToast('🔴 녹화를 시작합니다.', 'info');
     } catch (e) {
         console.error("MediaRecorder.start() 실패:", e);
         showError("녹화 시작 중 오류가 발생했습니다.");
@@ -343,9 +340,7 @@ function startTranslationFromWebcam() {
     // formData.append('file', state.uploadedFile, state.uploadedFile.name); 
 
     // uploadVideoToServer는 FormData를 받도록 구현되어 있어야 합니다.
-    uploadVideoToServer(); 
-    
-    showToast('⏳ 번역을 시작합니다.', 'info');
+    uploadVideoToServer();
 }
 
 // 번역 작업 2단계

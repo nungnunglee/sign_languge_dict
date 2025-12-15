@@ -313,7 +313,7 @@ function showGameResult(result) {
         setResultCardStyle(true, '성공!', 'text-emerald-600', 'border-emerald-400', 'bg-emerald-50');
         elements.scoreValue.innerHTML = '<i class="fa-solid fa-star text-5xl"></i>';
         elements.resultDesc.innerHTML = isMultiChoice
-            ? `<b>"${state.game.currentWord}"</b>의 올바른 영상을 찾으셨습니다!`
+            ? `<b>"${state.game.currentWord}"</b>의 올바른 동작을 찾으셨습니다!`
             : `AI가 <b>"${recognized_word}"</b>(으)로 인식했습니다.<br>정확합니다!`;
 
         state.game.totalScore += 10;
@@ -325,7 +325,7 @@ function showGameResult(result) {
 
 
         if (isMultiChoice) {
-            elements.resultDesc.innerHTML = `선택하신 영상은 <b>"${recognized_word}"</b>입니다.<br>정답은 <b>"${state.game.currentWord}"</b>입니다.`;
+            elements.resultDesc.innerHTML = `선택하신 동작은 <b>"${recognized_word}"</b>입니다.<br>정답은 <b>"${state.game.currentWord}"</b>입니다.`;
         } else {
             // 연습 모드
              elements.resultDesc.innerHTML = `AI가 <b>"${recognized_word}"</b>(으)로 인식했습니다.<br>정답은 <b>"${state.game.currentWord}"</b>입니다.`;

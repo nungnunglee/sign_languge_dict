@@ -32,7 +32,7 @@ def create_app(config_object: Optional[object] = None) -> Flask:
         app.config.update(
             SECRET_KEY='dev-key-please-change',
             UPLOAD_FOLDER='uploads',
-            MAX_CONTENT_LENGTH=16 * 1024 * 1024  # 16MB 제한
+            MAX_CONTENT_LENGTH=100 * 1024 * 1024  # 16MB 제한
         )
 
     # 4. Blueprint 등록

@@ -22,21 +22,67 @@ def _run_game_evaluation_task(file_id: str, task_data: Dict[str, Any], target_wo
     [Background Task] 사용자 영상 채점 및 결과 업데이트
     """
     try:
-        result = translator.evaluate_attempt(
-            user_video_path=task_data['original_path'],
-            target_word=target_word,
+        # translate_sign_language를 사용하여 비디오 분석
+        video_path = task_data['original_path']
+        output_dir = os.path.dirname(video_path)  # 업로드된 파일과 같은 디렉토리에 결과 저장
+        
+        translation_result = translator.translate_sign_language(
+            video_path=video_path,
+            output_dir=output_dir,
             progress_callback=lambda p, m: update_task_status(file_id, p, m)
         )
-
+        
+        if not translation_result.success:
+            # 번역 실패 시
+            update_task_status(
+                file_id, 100,
+                f"분석 실패: {translation_result.error or '알 수 없는 오류'}",
+                status='error',
+                error=translation_result.error or '알 수 없는 오류'
+            )
+            return
+        
+        # 인식된 단어와 정답 비교
+        recognized_word = translation_result.word
+        is_correct = (recognized_word == target_word)
+        
+        # 게임 결과 생성 (GameResult와 호환되는 형태)
+        game_result = {
+            'success': is_correct,
+            'recognized_word': recognized_word,
+            'score': 100 if is_correct else 0,
+            'similarity': 1.0 if is_correct else 0.0,
+            'processing_time': translation_result.processing_time
+        }
+        
+        result_message = f"결과: {recognized_word}" + (" (정답!)" if is_correct else f" (정답: {target_word})")
+        
         update_task_status(
             file_id, 100,
-            f"결과: {result.recognized_word}",
+            result_message,
             status='completed',
-            result=asdict(result)
+            result=game_result
         )
     except Exception as e:
-        logger.error(f"Game Evaluation Error: {e}")
+        logger.error(f"Game Evaluation Error: {e}", exc_info=True)
         update_task_status(file_id, 0, "채점 중 시스템 오류 발생", status='error', error=str(e))
+
+    # try:
+    #     result = translator.evaluate_attempt(
+    #         user_video_path=task_data['original_path'],
+    #         target_word=target_word,
+    #         progress_callback=lambda p, m: update_task_status(file_id, p, m)
+    #     )
+
+    #     update_task_status(
+    #         file_id, 100,
+    #         f"결과: {result.recognized_word}",
+    #         status='completed',
+    #         result=asdict(result)
+    #     )
+    # except Exception as e:
+    #     logger.error(f"Game Evaluation Error: {e}")
+    #     update_task_status(file_id, 0, "채점 중 시스템 오류 발생", status='error', error=str(e))
 
 
 @game_bp.route('/api/game/quiz', methods=['GET'])
