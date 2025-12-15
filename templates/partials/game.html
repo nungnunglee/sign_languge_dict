@@ -1,17 +1,14 @@
-<section id="game-app" class="glass-container max-w-2xl w-full hidden fade-in relative text-center mx-auto" aria-label="수어 퀴즈 게임">
+<section id="game-app" class="glass-container max-w-5xl w-full hidden fade-in relative text-center mx-auto" aria-label="수어 퀴즈 게임">
 
-    <!-- 헤더 -->
-    <header class="flex items-center justify-between mb-8 px-2 relative z-10">
-        <!-- 메인 화면으로 -->
+    <header class="flex items-center justify-between mb-8 px-4 relative z-10">
         <button onclick="goHome()" class="text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-2 py-2 group">
             <i class="fa-solid fa-chevron-left group-hover:-translate-x-1 transition-transform"></i>
             <span class="font-medium">나가기</span>
         </button>
 
-        <!-- 제목 -->
         <div id="game-header-status" class="hidden flex items-center gap-3">
             <span id="game-level-badge" class="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-xs font-bold tracking-wide border border-orange-200 shadow-sm">
-                LEVEL 1
+                1 / 5
             </span>
             <div class="bg-slate-800 text-yellow-400 px-4 py-1.5 rounded-full text-xs font-bold tracking-wide flex items-center gap-2 shadow-md ring-2 ring-slate-100">
                 <i class="fa-solid fa-star text-yellow-300 animate-spin-slow"></i>
@@ -21,7 +18,8 @@
         <div class="w-16"></div>
     </header>
 
-    <div id="game-menu-screen" class="py-6 animate-fade-in">
+
+    <div id="game-menu-screen" class="py-6 animate-fade-in max-w-3xl mx-auto">
         <div class="mb-10 relative inline-block">
             <span class="block text-xs font-bold text-orange-500 tracking-widest uppercase mb-1 animate-fade-in-up">Game Mode</span>
             <h2 class="relative z-10 text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-700 via-orange-500 to-slate-700 tracking-tight pb-1">
@@ -30,43 +28,92 @@
             <div class="absolute bottom-2 left-0 w-full h-3 bg-orange-200/60 -z-0 rounded-sm transform -rotate-1 scale-105 origin-bottom-left"></div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <button onclick="startGameMode('practice')" class="group bg-white p-6 rounded-2xl border-2 border-slate-100 hover:border-orange-400 transition-all shadow-sm hover:shadow-xl text-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-orange-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div class="relative z-10">
-                    <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-inner">
-                        <i class="fa-solid fa-video text-3xl text-orange-500"></i>
-                    </div>
-                    <h3 class="text-lg font-bold text-slate-700 mb-1 group-hover:text-orange-600 transition-colors">AI 동작 연습</h3>
-                    <p class="text-xs text-slate-500 break-keep group-hover:text-slate-600">제시어를 수어로 표현하면<br>AI가 정확도를 채점합니다.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 px-4">
+            <button onclick="selectGameMode('practice')" class="feature-card group text-center hover:ring-2 hover:ring-orange-400/50">
+                <div class="icon-wrapper bg-orange-100 text-orange-500 group-hover:bg-orange-500 group-hover:text-white mb-6 transition-all duration-300 group-hover:scale-110">
+                    <i class="fa-solid fa-video text-3xl"></i>
                 </div>
+                <h3 class="text-xl font-bold text-slate-700 mb-2 group-hover:text-orange-600 transition-colors">AI 동작 연습</h3>
+                <p class="text-sm text-slate-500 break-keep group-hover:text-slate-600 leading-relaxed">제시어를 수어로 표현하면<br>AI가 정확도를 채점합니다.</p>
             </button>
 
-            <button onclick="startGameMode('multichoice')" class="group bg-white p-6 rounded-2xl border-2 border-slate-100 hover:border-indigo-400 transition-all shadow-sm hover:shadow-xl text-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div class="relative z-10">
-                    <div class="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-inner">
-                        <i class="fa-solid fa-list-check text-3xl text-indigo-500"></i>
-                    </div>
-                    <h3 class="text-lg font-bold text-slate-700 mb-1 group-hover:text-indigo-600 transition-colors">영상 퀴즈</h3>
-                    <p class="text-xs text-slate-500 break-keep group-hover:text-slate-600">단어를 보고 올바른<br>수어 영상을 선택하세요.</p>
+            <button onclick="selectGameMode('multichoice')" class="feature-card group text-center hover:ring-2 hover:ring-indigo-400/50">
+                <div class="icon-wrapper bg-indigo-100 text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white mb-6 transition-all duration-300 group-hover:scale-110">
+                    <i class="fa-solid fa-list-check text-3xl"></i>
                 </div>
+                <h3 class="text-xl font-bold text-slate-700 mb-2 group-hover:text-indigo-600 transition-colors">영상 퀴즈</h3>
+                <p class="text-sm text-slate-500 break-keep group-hover:text-slate-600 leading-relaxed">단어를 보고 올바른<br>수어 영상을 선택하세요.</p>
             </button>
         </div>
     </div>
 
-    <div id="game-multichoice-screen" class="hidden">
+
+    <div id="game-setting-screen" class="hidden py-8 animate-fade-in max-w-5xl mx-auto">
+        <div class="mb-10 text-center">
+            <h3 class="text-2xl font-bold text-slate-800 mb-2">도전하고 싶은 문제 수를 선택해주세요.</h3>
+<!--            <p class="text-slate-500"></p>-->
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 mb-10">
+            <button onclick="startGameWithCount(3)" class="feature-card group text-center hover:-translate-y-2 transition-transform duration-300">
+                <div class="w-16 h-16 rounded-2xl bg-teal-100 text-teal-600 flex items-center justify-center mx-auto mb-4 group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                    <i class="fa-solid fa-mug-hot text-2xl"></i>
+                </div>
+                <h4 class="text-lg font-bold text-slate-700 mb-1">가볍게 풀기</h4>
+                <p class="text-sm text-slate-500 mb-4">짧게 연습하기 좋아요</p>
+                <span class="inline-block bg-teal-50 text-teal-700 text-xs font-bold px-3 py-1 rounded-full border border-teal-100">3문제</span>
+            </button>
+
+            <button onclick="startGameWithCount(5)" class="feature-card group text-center hover:-translate-y-2 transition-transform duration-300 ring-2 ring-indigo-50">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-4 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                    <i class="fa-solid fa-book-open text-2xl"></i>
+                </div>
+                <h4 class="text-lg font-bold text-slate-700 mb-1">적당히 풀기</h4>
+                <p class="text-sm text-slate-500 mb-4">가장 추천하는 모드예요</p>
+                <span class="inline-block bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full border border-indigo-100">5문제</span>
+            </button>
+
+            <div class="feature-card group text-center cursor-default relative overflow-visible">
+                <div class="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4 group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                    <i class="fa-solid fa-sliders text-2xl"></i>
+                </div>
+                <h4 class="text-lg font-bold text-slate-700 mb-1">직접 설정</h4>
+                <p class="text-sm text-slate-500 mb-4">2~10문제 자유 선택</p>
+
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 mb-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-slate-400">문제 수</span>
+                        <span id="custom-count-display" class="text-sm font-black text-rose-500">5</span>
+                    </div>
+                    <input type="range" id="custom-question-slider" min="2" max="10" value="5"
+                           class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                           oninput="document.getElementById('custom-count-display').textContent = this.value">
+                </div>
+
+                <button onclick="startCustomGame()" class="w-full py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-sm font-bold shadow-md shadow-rose-200 transition-colors">
+                    시작하기
+                </button>
+            </div>
+        </div>
+
+        <button onclick="toggleScreen('menu')" class="text-slate-400 hover:text-slate-600 font-medium text-sm underline decoration-slate-300 underline-offset-4">
+            모드 선택으로 돌아가기
+        </button>
+    </div>
+
+
+    <div id="game-multichoice-screen" class="hidden max-w-2xl mx-auto">
         <div class="bg-white p-6 rounded-2xl shadow-sm border border-indigo-50 mb-8 text-center relative overflow-hidden">
              <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-400 to-blue-500"></div>
             <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Find the correct video</p>
             <h3 id="multi-target-word" class="text-4xl font-black text-slate-800 tracking-tight">???</h3>
         </div>
-
         <div id="multi-options-container" class="grid grid-cols-2 gap-4">
             </div>
     </div>
 
-    <div id="game-quiz-screen" class="hidden">
+
+    <div id="game-quiz-screen" class="hidden max-w-2xl mx-auto">
         <div class="relative bg-white/80 backdrop-blur rounded-2xl p-8 mb-6 shadow-sm border border-slate-100 overflow-hidden group">
             <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-orange-400 to-red-500"></div>
             <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-3">Target Word</p>
@@ -114,7 +161,8 @@
         </div>
     </div>
 
-    <div id="game-loading-screen" class="hidden py-16" aria-live="polite">
+
+    <div id="game-loading-screen" class="hidden py-16 max-w-2xl mx-auto" aria-live="polite">
         <div class="w-20 h-20 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin mx-auto mb-8"></div>
         <h3 class="text-xl font-bold text-slate-800">AI 심사 중...</h3>
         <p id="game-progress-msg" class="text-slate-500 text-sm mt-2 animate-pulse">영상을 분석하고 있습니다</p>
@@ -123,13 +171,18 @@
         </div>
     </div>
 
-    <div id="game-result-screen" class="hidden py-8" aria-live="polite">
-        <div id="game-score-circle" class="w-44 h-44 rounded-full border-[12px] mx-auto flex flex-col items-center justify-center mb-8 shadow-xl bg-white transition-colors duration-500">
+
+    <div id="game-result-screen" class="hidden py-8 max-w-2xl mx-auto" aria-live="polite">
+        <div id="game-score-circle" class="w-44 h-44 rounded-full border-[12px] mx-auto flex flex-col items-center justify-center mb-6 shadow-xl bg-white transition-colors duration-500">
             <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Score</span>
             <span id="game-score-value" class="mt-1 text-5xl font-black tracking-tight"></span>
         </div>
         <h3 id="game-result-title" class="text-3xl font-bold mb-3 text-slate-800"></h3>
-        <p id="game-result-desc" class="text-slate-500 mb-10 px-8 break-keep leading-relaxed"></p>
+        <p id="game-result-desc" class="text-slate-500 mb-6 px-8 break-keep leading-relaxed"></p>
+
+        <button id="btn-view-answer" class="hidden mb-8 mx-auto px-5 py-2.5 bg-slate-50 text-slate-600 rounded-full text-sm font-bold hover:bg-slate-100 hover:text-indigo-600 transition-all border border-slate-200 flex items-center gap-2 shadow-sm">
+            <i class="fa-solid fa-play-circle text-indigo-500 text-lg"></i> 정답 영상 확인하기
+        </button>
 
         <div class="flex gap-3 justify-center w-full">
             <button onclick="initGameRound()" class="flex-1 py-4 bg-white border border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 transition-colors">
@@ -141,14 +194,15 @@
         </div>
     </div>
 
-    <div id="game-final-screen" class="hidden py-8" aria-live="polite">
+
+    <div id="game-final-screen" class="hidden py-8 max-w-2xl mx-auto" aria-live="polite">
         <div class="w-40 h-40 rounded-full border-[8px] border-indigo-100 bg-indigo-50 mx-auto flex flex-col items-center justify-center mb-8 shadow-xl animate-bounce-slight">
             <span class="text-indigo-400 text-xs font-bold uppercase">Total</span>
             <span id="game-final-score-value" class="mt-1 text-5xl font-black text-indigo-600"></span>
         </div>
         <h3 class="text-3xl font-bold mb-3 text-slate-800">게임 종료!</h3>
         <p class="text-slate-500 mb-10 px-6 leading-relaxed">
-             총 10단계 중 <b id="game-final-score-text" class="text-indigo-600 text-lg"></b>문제를 맞추셨습니다.<br>수고하셨습니다!
+             총 문제 중 <b id="game-final-score-text" class="text-indigo-600 text-lg"></b>문제를 맞추셨습니다.<br>수고하셨습니다!
         </p>
         <div class="flex gap-3 justify-center w-full">
             <button onclick="goHome()" class="flex-1 py-4 bg-white border border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 transition-colors">
@@ -159,6 +213,7 @@
             </button>
         </div>
     </div>
+
 
     <div id="video-preview-modal" class="hidden fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm fade-in" onclick="closeVideoPreview()">
         <div class="relative w-full max-w-4xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl ring-4 ring-white/20" onclick="event.stopPropagation()">
@@ -181,13 +236,11 @@
 
 <script type="module">
     import { initGame, loadNextQuestion } from '{{ url_for("static", filename="js/game.js") }}';
-    
-    // 1. 페이지 로드 시 이벤트 리스너 설정 및 초기 상태 리셋 (initGame은 이제 navigation을 하지 않습니다.)
-    initGame(); 
 
-    // 2. main.js의 카드 클릭 이벤트가 호출할 수 있도록 전역에 노출 (Issue 2 해결)
+    // 페이지 로드 시 게임 초기화
+    initGame();
+
+    // 전역 함수 연결 (HTML onclick에서 사용 가능하도록)
     window.initGame = initGame;
-    
-    // 3. 기존의 전역 함수 노출도 유지
     window.loadNextQuestion = loadNextQuestion;
 </script>
